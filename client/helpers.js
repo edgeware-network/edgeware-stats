@@ -1,9 +1,83 @@
+import * as $ from 'jquery';
+
+export const MAINNET_LOCKDROP = '0x1b75b90e60070d37cfa9d87affd124bb345bf70a';
+export const ROPSTEN_LOCKDROP = '0x111ee804560787E0bFC1898ed79DAe24F2457a04';
+
+const JUNE_1ST_UTC = 1559347200;
+const JUNE_16TH_UTC = 1560643200;
+const JULY_1ST_UTC = 1561939200;
+const JULY_16TH_UTC = 1563235200;
+const JULY_31ST_UTC = 1564531200;
+const AUG_15TH_UTC = 1565827200;
+const AUG_30TH_UTC = 1567123200;
+
+let provider, web3;
+
+export const lookupAddress = async (addr) => {
+  const lockdropContractAddress = state.network === 'mainnet' ? MAINNET_LOCKDROP : ROPSTEN_LOCKDROP;
+  const json = await $.getJSON('public/Lockdrop.json');
+  setupWeb3Provider(network);
+  const contract = new web3.eth.Contract(json.abi, lockdropContractAddress);
+
+  const lockEvents = await getLocks(contract, addr);
+  const signalEvents = await getSignals(contract, addr);
+  const now = await getCurrentTimestamp();
+  const etherscanNet = state.network === 'mainnet' ? 'https://etherscan.io/tx/' : 'https://ropsten.etherscan.io/tx/';
+  // Append only 1 signal event others will not be counted
+  if (signalEvents.length > 0) {
+    const balance = await web3.eth.getBalance(signalEvents[0].returnValues.contractAddr);
+    balance = web3.utils.fromWei(balance, 'ether');
+    $('#LOCK_LOOKUP_RESULTS').append($([
+      '<li>',
+      '   <div>',
+      '     <h3>Signal Event</h3>',
+      `     <p>Tx Hash: <a href=${etherscanNet}${signalEvents[0].transactionHash} target="_blank">${signalEvents[0].transactionHash}</a></p>`,
+      `     <p>ETH Signaled: ${balance}</p>`,
+      `     <p>Signaling Address: ${signalEvents[0].returnValues.contractAddr}</p>`,
+      `     <p>EDG Keys: ${signalEvents[0].returnValues.edgewareKey}</p>`,
+      `     <p>Signal Time: ${signalEvents[0].returnValues.time}</p>`,
+      '   </div>',
+      '</li>',
+    ].join('\n')))
+  }
+  // Parse out lock storage values
+  const promises = lockEvents.map(async event => {
+    const lockStorage = await getLockStorage(event.returnValues.lockAddr);
+    return {
+      txHash: event.transactionHash,
+      owner: event.returnValues.owner,
+      eth: web3.utils.fromWei(event.returnValues.eth, 'ether'),
+      lockContractAddr: event.returnValues.lockAddr,
+      term: event.returnValues.term,
+      edgewarePublicKeys: event.returnValues.edgewareKey,
+      unlockTime: `${(lockStorage.unlockTime - now) / 60} minutes`,
+    };
+  });
+  // Create lock event list elements
+  const results = await Promise.all(promises);
+  results.map(r => {
+    const listElt = $([
+      '<li>',
+      '   <div>',
+      '     <h3>Lock Event</h3>',
+      `     <p>Tx Hash: <a href=${etherscanNet}${r.txHash} target="_blank">${r.txHash}</a></p>`,
+      `     <p>Owner: ${r.owner}</p>`,
+      `     <p>ETH Locked: ${r.eth} ether</p>`,
+      `     <p>LUC Address: ${r.lockContractAddr}</p>`,
+      `     <p>Term Length: ${(r.term === 0) ? '3 months' : (r.term === 1) ? '6 months' : '12 months'}</p>`,
+      `     <p>EDG Keys: ${r.edgewarePublicKeys}</p>`,
+      `     <p>Unlock Time: ${r.unlockTime}</p>`,
+      '   </div>',
+      '</li>',
+    ].join('\n'));
+    $('#LOCK_LOOKUP_RESULTS').append(listElt);
+  });
+};
+
 /**
  * Setup web3 provider using InjectedWeb3's injected providers
  */
-export function setupWeb3Provider() {
-  // Setup web3 provider
-  let network = $('input[name="network"]:checked').val();
+export function setupWeb3Provider(network) {
   provider = new Web3.providers.HttpProvider(`https://${network}.infura.io`);
   web3 = new window.Web3(provider);
 }
@@ -64,12 +138,10 @@ export const getCurrentTimestamp = async () => {
   return block.timestamp;
 };
 
-export const getParticipationSummary = async () => {
-  let lockdropContractAddress = $('#LOCKDROP_CONTRACT_ADDRESS').val();
-  const json = await $.getJSON('Lockdrop.json');
-  setupWeb3Provider();
-  $('#EFFECTIVE_ETH_CHART').empty();
-  $('#ETH_CHART').empty();
+export const getParticipationSummary = async (network) => {
+  let lockdropContractAddress = network === 'mainnet' ? MAINNET_LOCKDROP : ROPSTEN_LOCKDROP;
+  const json = await $.getJSON('public/Lockdrop.json');
+  setupWeb3Provider(network);
 
   const contract = new web3.eth.Contract(json.abi, lockdropContractAddress);
   // Get balances of the lockdrop
@@ -117,7 +189,7 @@ export const calculateEffectiveLocks = async (lockdropContract) => {
 
   // Add balances and effective values to total
   let lockAmounts = [];
-  lockEvents.forEach((event) => {
+  lockEvents.slice(0, 10).forEach((event) => {
     const data = event.returnValues;
     let value = getEffectiveValue(data.eth, data.term, data.time, lockdropStartTime, totalETHLocked);
     lockAmounts.push([
@@ -142,7 +214,7 @@ export const calculateEffectiveSignals = async (lockdropContract, blockNumber=nu
   });
 
   let signalAmounts = [];
-  const promises = signalEvents.map(async (event) => {
+  const promises = signalEvents.slice(0, 10).map(async (event) => {
     const data = event.returnValues;
     // Get balance at block that lockdrop ends
     let balance;
