@@ -1,5 +1,5 @@
 {
-  "name": "edgeware-keygen",
+  "name": "edgeware-stats",
   "version": "0.0.1",
   "description": "",
   "private": true,
@@ -8,7 +8,7 @@
     "client": "webpack-dev-server --open --config webpack/webpack.config.dev.js"
   },
   "engines": {
-    "node": "12.3.1"
+    "node": ">=11.6.0"
   },
   "repository": {
     "type": "git",

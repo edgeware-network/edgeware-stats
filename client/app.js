@@ -5,7 +5,8 @@ import * as $ from 'jquery';
 import * as m from 'mithril';
 import Chart from 'chart.js';
 
-import { isHex, getParticipationSummary, lookupAddress, MAINNET_LOCKDROP, ROPSTEN_LOCKDROP } from './helpers';
+import { isHex, MAINNET_LOCKDROP, ROPSTEN_LOCKDROP } from './lockdropHelper';
+import { getParticipationSummary, lookupAddress } from './helpers';
 
 const CHART_COLORS = [ '#ff6383', '#ff9f40', '#ffcd56', '#4bc0c0', '#36a2eb', ];
 
@@ -33,6 +34,8 @@ async function triggerUpdateData() {
   } catch (e) {
     state.participationSummary = undefined;
   }
+
+  console.log(state.participationSummary);
   state.loading = false;
   if (!state.participationSummary) {
     console.log('No data');
