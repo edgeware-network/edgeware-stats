@@ -5,10 +5,7 @@ import * as $ from 'jquery';
 import * as m from 'mithril';
 import Chart from 'chart.js';
 
-import { isHex, getLocks, getSignals, getLockStorage, getCurrentTimestamp,
-         getParticipationSummary, getTotalLockedBalance, getTotalSignaledBalance,
-         calculateEffectiveLocks, calculateEffectiveSignals, getAdditiveBonus,
-         lookupAddress, MAINNET_LOCKDROP, ROPSTEN_LOCKDROP } from './helpers';
+import { isHex, getParticipationSummary, lookupAddress, MAINNET_LOCKDROP, ROPSTEN_LOCKDROP } from './helpers';
 
 const CHART_COLORS = [ '#ff6383', '#ff9f40', '#ffcd56', '#4bc0c0', '#36a2eb', ];
 
@@ -51,10 +48,120 @@ const App = {
         m('.container', 'Edgeware Lockdrop'),
       ]),
       m('.container.body-container', [
+        m('.charts', !state.participationSummary ? [
+          state.loading && m('#CHART_LOADING', 'Loading...'),
+          state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
+        ] : [
+          m('.chart', [
+            m('canvas#ETH_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const ethDistribution = [ summary.totalETHLocked, summary.totalETHSignaled ].reverse();
+                const ethDistributionLabels = [
+                  'Locked: ' + formatNumber(summary.totalETHLocked) + ' ETH',
+                  'Signaled: ' + formatNumber(summary.totalETHSignaled) + ' ETH',
+                ].reverse();
+
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: ethDistribution, backgroundColor: CHART_COLORS, }],
+                    labels: ethDistributionLabels,
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'ETH locked or signaled', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
+                      }
+                    }
+                  }
+                });
+              }
+            })
+          ]),
+          m('.chart', [
+            m('canvas#EFFECTIVE_ETH_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const totalEffectiveETH = summary.totalEffectiveETHLocked + summary.totalEffectiveETHSignaled;
+                const lockersEDG = 4500000000 * summary.totalEffectiveETHLocked / totalEffectiveETH;
+                const signalersEDG = 4500000000 * summary.totalEffectiveETHSignaled / totalEffectiveETH;
+                const otherEDG = 500000000;
+                const totalEDG = 5000000000;
+                const edgDistribution = [ lockersEDG, signalersEDG, otherEDG ].reverse();
+                const edgDistributionLabels = [
+                  'Lockers: ' + (100 * lockersEDG / totalEDG).toFixed(1) + '%',
+                  'Signalers: ' + (100 * signalersEDG / totalEDG).toFixed(1) + '%',
+                  'Other: ' + (100 * otherEDG / totalEDG).toFixed(1) + '%',
+                ].reverse();
+
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: edgDistribution, backgroundColor: CHART_COLORS, }],
+                    labels: edgDistributionLabels,
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'EDG distribution', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' EDG'
+                      }
+                    }
+                  }
+                });
+              }
+            }),
+          ]),
+          m('.chart', [
+            m('canvas#LOCK_PERIOD_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const lockPeriodDistribution = [
+                  summary.totalETHLocked3mo, summary.totalETHLocked6mo, summary.totalETHLocked12mo ].reverse();
+                const lockPeriodDistributionLabels = [
+                  '3mo: ' + (100 * summary.totalETHLocked3mo / summary.totalETHLocked).toFixed(1) + '%',
+                  '6mo: ' + (100 * summary.totalETHLocked6mo / summary.totalETHLocked).toFixed(1) + '%',
+                  '12mo: ' + (100 * summary.totalETHLocked12mo / summary.totalETHLocked).toFixed(1) + '%',
+                ].reverse();
+
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: lockPeriodDistribution, backgroundColor: CHART_COLORS, }],
+                    labels: lockPeriodDistributionLabels,
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'Lock period', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
+                      }
+                    }
+                  }
+                });
+              }
+            })
+          ]),
+          m('.clear'),
+        ]),
         m('.form-field', [
           m('.form-left', [
             m('.caption', [
-              'Lockdrop contract'
+              'Select lockdrop contract'
             ]),
             m('input#LOCKDROP_CONTRACT_ADDRESS', {
               type: 'text',
@@ -113,96 +220,6 @@ const App = {
             '.'
           ]),
         ]),
-        m('.charts', !state.participationSummary ? [
-          state.loading && m('#CHART_LOADING', 'Loading...'),
-          state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
-        ] : [
-          m('.chart', [
-            m('canvas#ETH_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const ethDistribution = [ summary.totalETHLocked, summary.totalETHSignaled ].reverse();
-                const ethDistributionLabels = [
-                  'Locked: ' + formatNumber(summary.totalETHLocked) + ' ETH',
-                  'Signaled: ' + formatNumber(summary.totalETHSignaled) + ' ETH',
-                ].reverse();
-
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: ethDistribution, backgroundColor: CHART_COLORS, }],
-                    labels: ethDistributionLabels,
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'ETH locked or signaled', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
-                      }
-                    }
-                  }
-                });
-              }
-            })
-          ]),
-          m('.chart', [
-            m('canvas#EFFECTIVE_ETH_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const totalEffectiveETH = summary.totalEffectiveETHLocked + summary.totalEffectiveETHSignaled;
-                const lockersEDG = 4500000000 * summary.totalEffectiveETHLocked / totalEffectiveETH;
-                const signalersEDG = 4500000000 * summary.totalEffectiveETHSignaled / totalEffectiveETH;
-                const otherEDG = 500000000;
-                const edgDistribution = [ lockersEDG, signalersEDG, otherEDG ].reverse();
-                const edgDistributionLabels = [ 'Lockers', 'Signalers', 'Other' ].reverse();
-
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: edgDistribution, backgroundColor: CHART_COLORS, }],
-                    labels: edgDistributionLabels,
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'EDG distribution', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' EDG'
-                      }
-                    }
-                  }
-                });
-              }
-            })
-          ]),
-        ]),
-        m('.numbers', [
-          m('.total-amount', [
-            'Total: ',
-            (state.participationSummary ?
-             (state.participationSummary.totalETHLocked + state.participationSummary.totalETHSignaled) : '--'),
-            ' ETH'
-          ]),
-          m('.locked-amount', [
-            'Locked: ',
-            (state.participationSummary ? state.participationSummary.totalETHLocked : '--'),
-            ' ETH'
-          ]),
-          m('.signaled-amount', [
-            'Signaled: ',
-            (state.participationSummary ? state.participationSummary.totalETHSignaled : '--'),
-            ' ETH'
-          ]),
-        ]),
-        m('br'),
-        m('br'),
         m('.form-field', [
           m('.form-left', [
             m('.caption', 'Find participant address'),
@@ -236,7 +253,7 @@ const App = {
       m('.footer', [
         m('.container', [
           m.trust('&copy;'),
-          ' 2019',
+          ' 2019 ',
           m('span.i18n', 'Commonwealth Labs'),
         ])
       ])

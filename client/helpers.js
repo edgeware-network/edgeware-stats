@@ -145,7 +145,8 @@ export const getParticipationSummary = async (network) => {
 
   const contract = new web3.eth.Contract(json.abi, lockdropContractAddress);
   // Get balances of the lockdrop
-  let { totalETHLocked, totalEffectiveETHLocked, numLocks } = await calculateEffectiveLocks(contract);
+  let { totalETHLocked, totalETHLocked3mo, totalETHLocked6mo, totalETHLocked12mo,
+        totalEffectiveETHLocked, numLocks } = await calculateEffectiveLocks(contract);
   let { totalETHSignaled, totalEffectiveETHSignaled, numSignals } = await calculateEffectiveSignals(contract);
   let totalETH = totalETHLocked.add(totalETHSignaled)
   let totalEffectiveETH = totalEffectiveETHLocked.add(totalEffectiveETHSignaled);
@@ -153,6 +154,9 @@ export const getParticipationSummary = async (network) => {
   let avgSignal = totalETHSignaled.div(web3.utils.toBN(numSignals));
   return {
     totalETHLocked: Number(web3.utils.fromWei(totalETHLocked, 'ether')),
+    totalETHLocked3mo: totalETHLocked3mo,
+    totalETHLocked6mo: totalETHLocked6mo,
+    totalETHLocked12mo: totalETHLocked12mo,
     totalEffectiveETHLocked: Number(web3.utils.fromWei(totalEffectiveETHLocked, 'ether')),
     totalETHSignaled: Number(web3.utils.fromWei(totalETHSignaled, 'ether')),
     totalEffectiveETHSignaled: Number(web3.utils.fromWei(totalEffectiveETHSignaled, 'ether')),
@@ -164,16 +168,6 @@ export const getParticipationSummary = async (network) => {
     avgSignal: Number(web3.utils.fromWei(avgSignal, 'ether')),
   };
 }
-
-export const getTotalLockedBalance = async (lockdropContract) => {
-  let { totalETHLocked, totalEffectiveETHLocked } = await calculateEffectiveLocks(lockdropContract);
-  return { totalETHLocked, totalEffectiveETHLocked };
-};
-
-export const getTotalSignaledBalance = async (lockdropContract) => {
-  let { totalETHSignaled, totalEffectiveETHSignaled } = await calculateEffectiveSignals(lockdropContract);
-  return { totalETHSignaled, totalEffectiveETHSignaled };
-};
 
 export const calculateEffectiveLocks = async (lockdropContract) => {
   let totalETHLocked = web3.utils.toBN(0);
@@ -200,9 +194,14 @@ export const calculateEffectiveLocks = async (lockdropContract) => {
     totalEffectiveETHLocked = totalEffectiveETHLocked.add(value);
   });
   lockAmounts.sort((a, b) => a[0] - b[0]).reverse();
-  console.log(lockAmounts);
+
+  const totalETHLocked3mo = lockAmounts.filter((l) => l[1] === '0').map((l) => l[0]).reduce((total, num) => total + num);
+  const totalETHLocked6mo = lockAmounts.filter((l) => l[1] === '1').map((l) => l[0]).reduce((total, num) => total + num);
+  const totalETHLocked12mo = lockAmounts.filter((l) => l[1] === '2').map((l) => l[0]).reduce((total, num) => total + num);
+
   // Return validating locks, locks, and total ETH locked
-  return { totalETHLocked, totalEffectiveETHLocked, numLocks: lockEvents.length };
+  return { totalETHLocked, totalETHLocked3mo, totalETHLocked6mo, totalETHLocked12mo,
+           totalEffectiveETHLocked, numLocks: lockEvents.length };
 };
 
 export const calculateEffectiveSignals = async (lockdropContract, blockNumber=null) => {

@@ -132,6 +132,9 @@ button:active,
 input[type="submit"]:active {
     background: #ddd;
 }
+.clear {
+    clear: both;
+}
 
 /*
  * PAGE LAYOUT
@@ -357,7 +360,6 @@ input[type="submit"]:active {
  * STATS PAGE STYLES
  */
 .charts {
-    display: flex;
     width: 100%;
     padding: 20px 0 0;
     border-radius: 6px;
@@ -372,7 +374,7 @@ input[type="submit"]:active {
     margin-top: 84px;
 }
 .charts .chart {
-    flex: 1;
+    float: left;
     width: 50%;
     padding: 0 0 30px;
 }
