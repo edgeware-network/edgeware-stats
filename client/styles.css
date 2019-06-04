@@ -1,41 +1,45 @@
 /*
- * BASE STYLES -FONTS
+ * FONTS
  */
 @font-face {
     font-family: 'ibm-plex-sans-webfont';
     font-weight: 400;
     font-style: normal;
-    src: url('./fonts/woff/IBMPlexSans-Regular.woff') format('woff'),
-         url('./fonts/woff2/IBMPlexSans-Regular.woff2') format('woff2'),
-         url('./fonts/ttf/IBMPlexSans-Regular.ttf') format('truetype');
+    src: url('fonts/eot/IBMPlexSans-Regular.eot') format('embedded-opentype'),
+         url('fonts/woff/IBMPlexSans-Regular.woff') format('woff'),
+         url('fonts/woff2/IBMPlexSans-Regular.woff2') format('woff2'),
+         url('fonts/ttf/IBMPlexSans-Regular.ttf') format('truetype');
 }
 @font-face {
     font-family: 'ibm-plex-sans-webfont';
     font-weight: 400;
     font-style: italic;
-    src: url('./fonts/woff/IBMPlexSans-Italic.woff') format('woff'),
-         url('./fonts/woff2/IBMPlexSans-Italic.woff2') format('woff2'),
-         url('./fonts/ttf/IBMPlexSans-Italic.ttf') format('truetype');
+    src: url('fonts/eot/IBMPlexSans-Italic.eot') format('embedded-opentype'),
+         url('fonts/woff/IBMPlexSans-Italic.woff') format('woff'),
+         url('fonts/woff2/IBMPlexSans-Italic.woff2') format('woff2'),
+         url('fonts/ttf/IBMPlexSans-Italic.ttf') format('truetype');
 }
 @font-face {
     font-family: 'ibm-plex-sans-webfont';
     font-weight: 500;
     font-style: normal;
-    src: url('./fonts/woff/IBMPlexSans-Medium.woff') format('woff'),
-         url('./fonts/woff2/IBMPlexSans-Medium.woff2') format('woff2'),
-         url('./fonts/ttf/IBMPlexSans-Medium.ttf') format('truetype');
+    src: url('fonts/eot/IBMPlexSans-Medium.eot') format('embedded-opentype'),
+         url('fonts/woff/IBMPlexSans-Medium.woff') format('woff'),
+         url('fonts/woff2/IBMPlexSans-Medium.woff2') format('woff2'),
+         url('fonts/ttf/IBMPlexSans-Medium.ttf') format('truetype');
 }
 @font-face {
     font-family: 'ibm-plex-sans-webfont';
     font-weight: 500;
     font-style: italic;
-    src: url('./fonts/woff/IBMPlexSans-MediumItalic.woff') format('woff'),
-         url('./fonts/woff2/IBMPlexSans-MediumItalic.woff2') format('woff2'),
-         url('./fonts/ttf/IBMPlexSans-MediumItalic.ttf') format('truetype');
+    src: url('fonts/eot/IBMPlexSans-MediumItalic.eot') format('embedded-opentype'),
+         url('fonts/woff/IBMPlexSans-MediumItalic.woff') format('woff'),
+         url('fonts/woff2/IBMPlexSans-MediumItalic.woff2') format('woff2'),
+         url('fonts/ttf/IBMPlexSans-MediumItalic.ttf') format('truetype');
 }
 
 /*
- * BASE STYLES -GLOBALS
+ * GLOBALS
  */
 * {
     box-sizing: border-box;
@@ -56,10 +60,6 @@ h2 {
 }
 h3 {
     margin-top: 30px;
-}
-h4 {
-    margin-top: 50px;
-    margin-bottom: 6px;
 }
 hr {
     border-top: none;
@@ -100,7 +100,6 @@ code {
     font-size: 18px;
     margin-top: 30px;
 }
-input.ss58-address,
 input[type="text"],
 input[type="email"] {
     height: 42px;
@@ -110,7 +109,6 @@ input[type="email"] {
     border-radius: 4px;
     padding-left: 14px;
 }
-input.ss58-address:not([readonly]):focus,
 input[type="text"]:not([readonly]):focus,
 input[type="email"]:not([readonly]):focus{
     border-color: #08c;
@@ -127,7 +125,7 @@ input[type="submit"] {
     border-radius: 4px;
     color: #111;
     height: 42px;
-    padding: 8px 20px 8px;
+    padding: 10px 20px 8px;
     line-height: 1;
 }
 button:active,
@@ -136,10 +134,10 @@ input[type="submit"]:active {
 }
 
 /*
- * BASE STYLES -PAGE LAYOUT
+ * PAGE LAYOUT
  */
 .header {
-    background-image: url("./header.png");
+    background-image: url("header.png");
     background-size: cover;
     background-position: center;
     color: #fff;
@@ -153,7 +151,6 @@ input[type="submit"]:active {
     padding: 20px 0 25px;
     font-size: 16px;
     text-align: center;
-    margin-top: 50px;
 }
 .footer,
 .footer a {
@@ -167,17 +164,15 @@ input[type="submit"]:active {
 .container.body-container {
     margin: 40px auto 80px;
 }
-input.ss58-address,
-input[type="text"] {
+.image {
+    display: block;
+    margin: 30px 0;
     width: 100%;
-    margin: 6px 0;
-}
-button {
-    margin: 10px 0;
+    max-width: 600px;
 }
 
 /*
- * BASE STYLES -COMPONENTS
+ * COMPONENTS
  */
 .wallet-explanation {
     margin: 40px 0;
@@ -185,12 +180,142 @@ button {
     background: #eee;
     border-radius: 6px;
 }
-p.caption {
+.form-field {
+    display: flex;
+    margin: 40px 0;
+}
+.form-field input[type="text"] + input[type="text"] {
+    margin: 10px 0;
+}
+.form-field.form-field-locking,
+.form-field.form-field-signaling {
+    visibility: hidden;
+    height: 0;
+    opacity: 0;
+    transition: visibility 0s, opacity 0.5s linear;
+    margin: 0;
+}
+.body-container.locking .form-field.form-field-locking {
+    visibility: visible;
+    opacity: 1;
+    height: initial;
+    margin: 40px 0;
+}
+.body-container.signaling .form-field.form-field-signaling {
+    visibility: visible;
+    opacity: 1;
+    height: initial;
+    margin: 40px 0;
+}
+.form-field .form-left {
+    flex: 1;
+    width: 59%;
+    padding-right: 35px;
+}
+.form-field .explanation {
+    width: 41%;
+}
+.form-field .caption {
+    margin-bottom: 8px;
+}
+.form-field label {
+    display: block;
+    margin-bottom: 4px;
+}
+.form-field label input[type="radio"] {
+    position: relative;
+    top: -3px;
+    margin-right: 12px;
+}
+.form-field input[type="text"] {
+    display: block;
+    width: 100%;
+}
+.form-field input[type="text"][readonly] {
+    background: #f8f8f8;
+}
+.form-field .buttons {
+    margin: 14px 0 16px;
+}
+.form-field button {
+    display: block;
+    margin-bottom: 8px;
+}
+.form-field .explanation {
+    display: block;
     color: #aaa;
+    padding-top: 30px;
+}
+.form-field .explanation p {
+    margin: 10px 0;
+}
+.form-field .explanation a {
+    color: #aaa;
+}
+.form-field .explanation a:hover {
+    color: #555;
+}
+.form-field .network-selector {
+    margin-top: 12px;
+}
+.form-field .network-selector label {
+    display: inline-block;
+    margin-right: 20px;
+}
+.form-field button.injectedWeb3,
+.form-field button.unlock {
+    background: #ec8118;
+    color: #fff;
+}
+.form-field button.mycrypto {
+    background: #007895;
+    color: #fff;
+}
+.form-field button.cli {
+    background: #333;
+    color: #fff;
+}
+
+.participation-option {
+    display: none;
+}
+.ropsten-address-warning {
+    padding: 10px 22px;
+    background: #ec8118;
+    color: #fff;
+    border-radius: 4px;
+    display: none;
+}
+
+.injectedWeb3-error,
+.injectedWeb3-success {
+    margin: 20px 0;
+}
+.injectedWeb3-error {
+    color: #d3363c;
+}
+.injectedWeb3-success {
+    color: #53a55b;
+}
+
+.congratulations {
+    margin-top: 50px;
+}
+.share-tweet {
+    display: inline-block;
+    padding: 7px 15px;
+    margin-top: 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #fff;
+    background: #1ca1f2;
+}
+.share-tweet:hover {
+    opacity: 0.9;
 }
 
 /*
- * BASE STYLES -RESPONSIVE STYLES
+ * RESPONSIVE STYLES
  */
 @media (max-width: 1000px) {
     .container {
@@ -199,7 +324,7 @@ p.caption {
 }
 @media (max-width: 880px) {
     .wallet-explanation {
-        margin: 20px 0;
+        margin: 10px 0;
     }
     .container {
         max-width: 640px;
@@ -207,7 +332,19 @@ p.caption {
         padding-left: 20px;
     }
     .container.body-container {
-        margin: 20px 0;
+        margin: 20px auto;
+    }
+    .form-field {
+        display: block;
+    }
+    .form-field .form-left,
+    .form-field .explanation {
+        width: 100%;
+        margin: 10px 0;
+        padding: 0;
+    }
+    .buttons button {
+        width: 100%;
     }
 }
 @media (max-width: 680px) {
@@ -228,18 +365,16 @@ p.caption {
     margin: 16px 0;
     min-height: 240px;
 }
-
-#CHARTS_LOADING {
+.charts #CHART_LOADING {
     color: #c0c0c0;
     text-align: center;
     width: 100%;
     margin-top: 84px;
 }
-
-#ETH_CHART, #EFFECTIVE_ETH_CHART {
+.charts .chart {
     flex: 1;
-    max-width: 50%;
-    overflow: hidden;
+    width: 50%;
+    padding: 0 0 30px;
 }
 
 .numbers {
@@ -250,10 +385,7 @@ p.caption {
 }
 
 @media (max-width: 680px) {
-    .charts {
+    .chart {
         display: block
-    }
-    #ETH_CHART, #EFFECTIVE_ETH_CHART {
-        max-width: 100%;
     }
 }

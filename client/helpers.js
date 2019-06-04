@@ -13,8 +13,8 @@ const AUG_30TH_UTC = 1567123200;
 
 let provider, web3;
 
-export const lookupAddress = async (addr) => {
-  const lockdropContractAddress = state.network === 'mainnet' ? MAINNET_LOCKDROP : ROPSTEN_LOCKDROP;
+export const lookupAddress = async (addr, network) => {
+  const lockdropContractAddress = network === 'mainnet' ? MAINNET_LOCKDROP : ROPSTEN_LOCKDROP;
   const json = await $.getJSON('public/Lockdrop.json');
   setupWeb3Provider(network);
   const contract = new web3.eth.Contract(json.abi, lockdropContractAddress);
@@ -22,7 +22,7 @@ export const lookupAddress = async (addr) => {
   const lockEvents = await getLocks(contract, addr);
   const signalEvents = await getSignals(contract, addr);
   const now = await getCurrentTimestamp();
-  const etherscanNet = state.network === 'mainnet' ? 'https://etherscan.io/tx/' : 'https://ropsten.etherscan.io/tx/';
+  const etherscanNet = network === 'mainnet' ? 'https://etherscan.io/tx/' : 'https://ropsten.etherscan.io/tx/';
   // Append only 1 signal event others will not be counted
   if (signalEvents.length > 0) {
     const balance = await web3.eth.getBalance(signalEvents[0].returnValues.contractAddr);
@@ -189,7 +189,7 @@ export const calculateEffectiveLocks = async (lockdropContract) => {
 
   // Add balances and effective values to total
   let lockAmounts = [];
-  lockEvents.slice(0, 10).forEach((event) => {
+  lockEvents.forEach((event) => {
     const data = event.returnValues;
     let value = getEffectiveValue(data.eth, data.term, data.time, lockdropStartTime, totalETHLocked);
     lockAmounts.push([
@@ -214,7 +214,7 @@ export const calculateEffectiveSignals = async (lockdropContract, blockNumber=nu
   });
 
   let signalAmounts = [];
-  const promises = signalEvents.slice(0, 10).map(async (event) => {
+  const promises = signalEvents.map(async (event) => {
     const data = event.returnValues;
     // Get balance at block that lockdrop ends
     let balance;

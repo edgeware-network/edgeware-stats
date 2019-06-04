@@ -3,89 +3,49 @@ import 'styles.css';
 
 import * as $ from 'jquery';
 import * as m from 'mithril';
-import { GoogleCharts } from 'google-charts';
+import Chart from 'chart.js';
 
 import { isHex, getLocks, getSignals, getLockStorage, getCurrentTimestamp,
          getParticipationSummary, getTotalLockedBalance, getTotalSignaledBalance,
          calculateEffectiveLocks, calculateEffectiveSignals, getAdditiveBonus,
          lookupAddress, MAINNET_LOCKDROP, ROPSTEN_LOCKDROP } from './helpers';
 
+const CHART_COLORS = [ '#ff6383', '#ff9f40', '#ffcd56', '#4bc0c0', '#36a2eb', ];
+
+const formatNumber = (num) => {
+  // formats large numbers with commas
+  const nf = new Intl.NumberFormat();
+  return num < 0.001 ? num.toString() : nf.format(num);
+};
+
+// page global state stored here
 const state = {
   network: 'mainnet',
-  loadingLocksAndSignals: true,
-  noData: null,
-  // data rendered in the dashboard
+  loading: true,
+  noData: false,
   participationSummary: null,
 };
 
+// sets the state to "loading" and updates data from backend
 async function triggerUpdateData() {
+  console.log('fetching data for ' + state.network);
+  state.loading = true;
+  m.redraw();
   try {
     state.participationSummary = await getParticipationSummary(state.network);
   } catch (e) {
     state.participationSummary = undefined;
   }
+  state.loading = false;
   if (!state.participationSummary) {
     console.log('No data');
-    state.loadingLocksAndSignals = false;
     state.noData = true;
   }
   m.redraw();
 }
 
-// // Draw the chart and set the chart values
-// function drawChart(summary) {
-//   var vanillaData = GoogleCharts.api.visualization.arrayToDataTable([
-//     ['Type', 'Lock or signal action'],
-//     ['Locked ETH', summary.totalETHLocked],
-//     ['Signaled ETH', summary.totalETHSignaled],
-//   ]);
-
-//   $('.total-amount span').text((summary.totalETHLocked + summary.totalETHSignaled).toFixed(2));
-//   $('.locked-amount span').text(summary.totalETHLocked.toFixed(2));
-//   $('.signaled-amount span').text(summary.totalETHSignaled.toFixed(2));
-
-//   const totalEffectiveETH = summary.totalEffectiveETHLocked + summary.totalEffectiveETHSignaled;
-//   const lockersEDG = 4500000000 * summary.totalEffectiveETHLocked / totalEffectiveETH;
-//   const signalersEDG = 4500000000 * summary.totalEffectiveETHSignaled / totalEffectiveETH;
-//   const foundersEDG = 500000000;
-//   var effectiveData = GoogleCharts.api.visualization.arrayToDataTable([
-//     ['Type', 'Lock or signal action'],
-//     ['Lockers', lockersEDG],
-//     ['Signalers', signalersEDG],
-//     ['Other', foundersEDG],
-//   ]);
-
-//   // Optional; add a title and set the width and height of the chart
-//   var width = $(window).width() > 600 ? 550 : $(window).width() - 100;
-//   var vanillaOptions = {
-//     title: 'ETH locked or signaled',
-//     width: width,
-//     height: 400,
-//   };
-//   var effectiveOptions = {
-//     title: 'EDG distribution',
-//     width: width,
-//     height: 400,
-//   };
-
-//   // Display the chart inside the <div> element with id="piechart"
-//   var vanillaChart = new GoogleCharts.api.visualization.PieChart(document.getElementById('ETH_CHART'));
-//   vanillaChart.draw(vanillaData, vanillaOptions);
-
-//   var effectiveChart = new GoogleCharts.api.visualization.PieChart(document.getElementById('EFFECTIVE_ETH_CHART'));
-//   effectiveChart.draw(effectiveData, effectiveOptions);
-//   $('#CHARTS_LOADING').hide();
-// }
-
 const App = {
   view: (vnode) => {
-    // trigger chart update when network changes
-    if (vnode.state.displaying !== state.network) {
-      console.log('fetching data for ' + state.network);
-      vnode.state.displaying = state.network;
-      triggerUpdateData();
-    }
-
     return m('.App', [
       m('.header', [
         m('.container', 'Edgeware Lockdrop'),
@@ -108,7 +68,11 @@ const App = {
                   name: 'network',
                   value: 'mainnet',
                   oninput: (e) => {
-                    if (e.target.checked) state.network = 'mainnet';
+                    if (e.target.checked) {
+                      state.network = 'mainnet';
+                      state.participationSummary = null;
+                      triggerUpdateData();
+                    }
                     m.redraw();
                   },
                   oncreate: (vnode) => {
@@ -124,7 +88,11 @@ const App = {
                   name: 'network',
                   value: 'ropsten',
                   oninput: (e) => {
-                    if (e.target.checked) state.network = 'ropsten';
+                    if (e.target.checked) {
+                      state.network = 'ropsten';
+                      state.participationSummary = null;
+                      triggerUpdateData();
+                    }
                     m.redraw();
                   },
                 }),
@@ -145,26 +113,91 @@ const App = {
             '.'
           ]),
         ]),
-        m('.charts', [
-          state.loadingLocksAndSignals && m('#CHARTS_LOADING', 'Loading...'),
-          state.noData && m('#CHARTS_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
-          m('#ETH_CHART'),
-          m('#EFFECTIVE_ETH_CHART'),
+        m('.charts', !state.participationSummary ? [
+          state.loading && m('#CHART_LOADING', 'Loading...'),
+          state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
+        ] : [
+          m('.chart', [
+            m('canvas#ETH_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const ethDistribution = [ summary.totalETHLocked, summary.totalETHSignaled ].reverse();
+                const ethDistributionLabels = [
+                  'Locked: ' + formatNumber(summary.totalETHLocked) + ' ETH',
+                  'Signaled: ' + formatNumber(summary.totalETHSignaled) + ' ETH',
+                ].reverse();
+
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: ethDistribution, backgroundColor: CHART_COLORS, }],
+                    labels: ethDistributionLabels,
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'ETH locked or signaled', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
+                      }
+                    }
+                  }
+                });
+              }
+            })
+          ]),
+          m('.chart', [
+            m('canvas#EFFECTIVE_ETH_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const totalEffectiveETH = summary.totalEffectiveETHLocked + summary.totalEffectiveETHSignaled;
+                const lockersEDG = 4500000000 * summary.totalEffectiveETHLocked / totalEffectiveETH;
+                const signalersEDG = 4500000000 * summary.totalEffectiveETHSignaled / totalEffectiveETH;
+                const otherEDG = 500000000;
+                const edgDistribution = [ lockersEDG, signalersEDG, otherEDG ].reverse();
+                const edgDistributionLabels = [ 'Lockers', 'Signalers', 'Other' ].reverse();
+
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: edgDistribution, backgroundColor: CHART_COLORS, }],
+                    labels: edgDistributionLabels,
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'EDG distribution', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' EDG'
+                      }
+                    }
+                  }
+                });
+              }
+            })
+          ]),
         ]),
         m('.numbers', [
           m('.total-amount', [
             'Total: ',
-            (state.participationSummary ? state.participationSummary.totalETHLocked : '--'),
+            (state.participationSummary ?
+             (state.participationSummary.totalETHLocked + state.participationSummary.totalETHSignaled) : '--'),
             ' ETH'
           ]),
           m('.locked-amount', [
             'Locked: ',
-            (state.participationSummary ? state.participationSummary.totalETHSignaled : '--'),
+            (state.participationSummary ? state.participationSummary.totalETHLocked : '--'),
             ' ETH'
           ]),
           m('.signaled-amount', [
             'Signaled: ',
-            (state.participationSummary ? (state.participationSummary.totalETHLocked + state.participationSummary.totalETHSignaled) : '--'),
+            (state.participationSummary ? state.participationSummary.totalETHSignaled : '--'),
             ' ETH'
           ]),
         ]),
@@ -191,7 +224,7 @@ const App = {
                 alert('You must input a valid lengthed Ethereum address')
               } else {
                 if (addr.length === 40) addr = `0x${addr}`;
-                lookupAddress(addr);
+                lookupAddress(addr, state.network);
               }
             }
           }, 'Lookup'),
@@ -211,6 +244,4 @@ const App = {
   }
 };
 
-GoogleCharts.load(() => {
-  m.mount(document.body, App);
-});
+m.mount(document.body, App);
