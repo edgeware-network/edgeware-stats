@@ -87,6 +87,31 @@ export const getParticipationSummary = async (network) => {
   let avgLock = totalETHLocked.div(web3.utils.toBN(numLocks));
   let avgSignal = totalETHSignaled.div(web3.utils.toBN(numSignals));
   // Convert most return types to numbers
+  Object.keys(locks).map(l => {
+    let newLockAmt = Number(web3.utils.fromWei(locks[l].lockAmt, 'ether'));
+    let newEffeVal = Number(web3.utils.fromWei(locks[l].effectiveValue, 'ether'));
+    locks[l] = Object.assign({}, locks[l], {
+      lockAmt: newLockAmt,
+      effectiveValue: newEffeVal,
+    });
+  });
+  Object.keys(validatingLocks).map(l => {
+    let newLockAmt = Number(web3.utils.fromWei(validatingLocks[l].lockAmt, 'ether'));
+    let newEffeVal = Number(web3.utils.fromWei(validatingLocks[l].effectiveValue, 'ether'));
+    validatingLocks[l] = Object.assign({}, validatingLocks[l], {
+      lockAmt: newLockAmt,
+      effectiveValue: newEffeVal,
+    });
+  });
+  Object.keys(signals).map(s => {
+    let newSignalAmt = Number(web3.utils.fromWei(signals[s].signalAmt, 'ether'));
+    let newEffeVal = Number(web3.utils.fromWei(signals[s].effectiveValue, 'ether'));
+    signals[s] = Object.assign({}, signals[s], {
+      signalAmt: newSignalAmt,
+      effectiveValue: newEffeVal,
+    });
+  });
+
   return {
     locks,
     validatingLocks,

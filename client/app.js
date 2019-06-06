@@ -4,6 +4,7 @@ import 'styles.css';
 import * as $ from 'jquery';
 import * as m from 'mithril';
 import Chart from 'chart.js';
+import randomColor from 'randomcolor';
 
 import { isHex, MAINNET_LOCKDROP, ROPSTEN_LOCKDROP } from './lockdropHelper';
 import { getParticipationSummary, lookupAddress } from './helpers';
@@ -126,28 +127,168 @@ const App = {
             }),
           ]),
           m('.chart', [
-            m('canvas#LOCK_PERIOD_CHART', {
+            m('canvas#LOCK_DISTRIBUTION_CHART', {
               oncreate: (vnode) => {
                 const summary = state.participationSummary;
-                const lockPeriodDistribution = [
-                  summary.totalETHLocked3mo, summary.totalETHLocked6mo, summary.totalETHLocked12mo ].reverse();
-                const lockPeriodDistributionLabels = [
-                  '3mo: ' + (100 * summary.totalETHLocked3mo / summary.totalETHLocked).toFixed(1) + '%',
-                  '6mo: ' + (100 * summary.totalETHLocked6mo / summary.totalETHLocked).toFixed(1) + '%',
-                  '12mo: ' + (100 * summary.totalETHLocked12mo / summary.totalETHLocked).toFixed(1) + '%',
-                ].reverse();
+                const lockParticipants = Object.keys(summary.locks);
+                const lockDistribution = Object.keys(summary.locks).map(l => summary.locks[l].lockAmt);
+                const colors = randomColor({ count: lockParticipants.length });
+               
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: lockDistribution, backgroundColor: colors, }],
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'Locks Distribution', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
+                      }
+                    }
+                  }
+                });
+              }
+            })
+          ]),
+          m('.chart', [
+            m('canvas#EFFECTIVE_LOCKS_DISTRIBUTION_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const lockParticipants = Object.keys(summary.locks);
+                const effectiveLocksDistribution = Object.keys(summary.locks).map(l => summary.locks[l].effectiveValue);
+                const colors = randomColor({ count: lockParticipants.length });
+               
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: effectiveLocksDistribution, backgroundColor: colors, }],
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'Effective Locks Distribution', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
+                      }
+                    }
+                  }
+                });
+              }
+            })
+          ]),
+          m('.chart', [
+            m('canvas#VALIDATING_LOCK_DISTRIBUTION_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const validatingParticipants = Object.keys(summary.validatingLocks);
+                const validatingDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].lockAmt);
+                const colors = randomColor({ count: validatingParticipants.length });
 
                 const ctx = vnode.dom.getContext('2d');
                 vnode.state.chart = new Chart(ctx, {
                   type: 'pie',
                   data: {
-                    datasets: [{ data: lockPeriodDistribution, backgroundColor: CHART_COLORS, }],
-                    labels: lockPeriodDistributionLabels,
+                    datasets: [{ data: validatingDistribution, backgroundColor: colors, }],
                   },
                   options: {
                     responsive: true,
                     legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'Lock period', fontSize: 14 },
+                    title: { display: true, text: 'Validating Locks Distribution', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
+                      }
+                    }
+                  }
+                });
+              }
+            })
+          ]),
+          m('.chart', [
+            m('canvas#EFFECTIVE_VALIDATING_LOCK_DISTRIBUTION_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const validatingParticipants = Object.keys(summary.validatingLocks);
+                const effectiveValDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].effectiveValue);
+                const colors = randomColor({ count: validatingParticipants.length });
+
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: effectiveValDistribution, backgroundColor: colors, }],
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'Effective Validating Locks Distribution', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
+                      }
+                    }
+                  }
+                });
+              }
+            })
+          ]),
+          m('.chart', [
+            m('canvas#SIGNAL_DISTRIBUTION_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const signalParticipants = Object.keys(summary.signals);
+                const signalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].signalAmt);
+                const colors = randomColor({ count: signalParticipants.length });
+
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: signalDistribution, backgroundColor: colors, }],
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'Signals Distribution', fontSize: 14 },
+                    tooltips: {
+                      callbacks: {
+                        label: (tooltipItem, data) =>
+                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
+                      }
+                    }
+                  }
+                });
+              }
+            })
+          ]),
+          m('.chart', [
+            m('canvas#EFFECTIVE_SIGNAL_DISTRIBUTION_CHART', {
+              oncreate: (vnode) => {
+                const summary = state.participationSummary;
+                const signalParticipants = Object.keys(summary.signals);
+                const effectiveSignalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].effectiveValue);
+                const colors = randomColor({ count: signalParticipants.length });
+
+                const ctx = vnode.dom.getContext('2d');
+                vnode.state.chart = new Chart(ctx, {
+                  type: 'pie',
+                  data: {
+                    datasets: [{ data: effectiveSignalDistribution, backgroundColor: colors, }],
+                  },
+                  options: {
+                    responsive: true,
+                    legend: { reverse: true, position: 'bottom' },
+                    title: { display: true, text: 'Effective Signals Distribution', fontSize: 14 },
                     tooltips: {
                       callbacks: {
                         label: (tooltipItem, data) =>
