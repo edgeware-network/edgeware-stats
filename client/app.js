@@ -7,7 +7,7 @@ import Chart from 'chart.js';
 import randomColor from 'randomcolor';
 
 import { isHex, MAINNET_LOCKDROP, ROPSTEN_LOCKDROP } from './lockdropHelper';
-import { getParticipationSummary, lookupAddress } from './helpers';
+import { getParticipationSummary, getAddressSummary } from './helpers';
 
 const CHART_COLORS = [ '#ff6383', '#ff9f40', '#ffcd56', '#4bc0c0', '#36a2eb', ];
 
@@ -23,6 +23,7 @@ const state = {
   loading: true,
   noData: false,
   participationSummary: null,
+  addressSummary: null,
 };
 
 // sets the state to "loading" and updates data from backend
@@ -31,7 +32,7 @@ async function triggerUpdateData() {
   state.loading = true;
   m.redraw();
   try {
-    state.participationSummary = await getParticipationSummary(state.network);
+    //state.participationSummary = await getParticipationSummary(state.network);
   } catch (e) {
     state.participationSummary = undefined;
   }
@@ -133,7 +134,7 @@ const App = {
                 const lockParticipants = Object.keys(summary.locks);
                 const lockDistribution = Object.keys(summary.locks).map(l => summary.locks[l].lockAmt);
                 const colors = randomColor({ count: lockParticipants.length });
-               
+
                 const ctx = vnode.dom.getContext('2d');
                 vnode.state.chart = new Chart(ctx, {
                   type: 'pie',
@@ -162,7 +163,7 @@ const App = {
                 const lockParticipants = Object.keys(summary.locks);
                 const effectiveLocksDistribution = Object.keys(summary.locks).map(l => summary.locks[l].effectiveValue);
                 const colors = randomColor({ count: lockParticipants.length });
-               
+
                 const ctx = vnode.dom.getContext('2d');
                 vnode.state.chart = new Chart(ctx, {
                   type: 'pie',
@@ -376,6 +377,7 @@ const App = {
         ]),
         m('.buttons', [
           m('button#LOCK_LOOKUP_BTN', {
+            class: vnode.state.lookupLoading ? 'disabled' : '',
             onclick: async () => {
               const addr = $('#LOCKDROP_PARTICIPANT_ADDRESS').val();
               if (!isHex(addr)) {
@@ -385,12 +387,35 @@ const App = {
                 alert('You must input a valid lengthed Ethereum address')
               } else {
                 if (addr.length === 40) addr = `0x${addr}`;
-                lookupAddress(addr, state.network);
+                vnode.state.lookupLoading = true;
+                state.addressSummary = await getAddressSummary(addr, state.network);
+                vnode.state.lookupLoading = false;
               }
             }
-          }, 'Lookup'),
+          }, vnode.state.lookupLoading ? 'Loading...' : 'Lookup'),
           m('div', [
-            m('ul#LOCK_LOOKUP_RESULTS')
+            state.addressSummary && m('ul#LOCK_LOOKUP_RESULTS', state.addressSummary.events.map((event) => {
+              return m('li', [
+                m('h3', (event.type === 'signal') ? 'Signal Event' : 'Lock Event'),
+                m('p', [
+                  'Tx Hash: ',
+                  m('a', { href: `${etherscanNet}${event.data.transactionHash}`, target: '_blank' }, data.transactionHash),
+                ]),
+                event.type === 'signal' ? [
+                  m('p', `ETH Signaled: ${event.eth.toFixed(2)}`),
+                  m('p', `Signaling Address: ${event.data.returnValues.contractAddr}`),
+                  m('p', `EDG Keys: ${event.data.returnValues.edgewareAddr}`),
+                  m('p', `Signal Time: ${event.data.returnValues.time}`),
+                ] : [
+                  m('p', `ETH Locked: ${event.eth.toFixed(2)}`),
+                  m('p', `Owner Address: ${event.data.returnValues.owner}`),
+                  m('p', `LUC Address: ${event.data.returnValues.lockAddr}`),
+                  m('p', `Term Length: ${(event.data.returnValues.term === '0') ? '3 months' : (event.data.returnValues.term === '1') ? '6 months' : '12 months'}`),
+                  m('p', `EDG Keys: ${event.data.returnValues.edgewareAddr}`),
+                  m('p', `Unlock Time: ${event.unlockTime} minutes`),
+                ],
+              ]);
+            }))
           ])
         ]),
       ]),

@@ -132,6 +132,10 @@ button:active,
 input[type="submit"]:active {
     background: #ddd;
 }
+button.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
 .clear {
     clear: both;
 }
