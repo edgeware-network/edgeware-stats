@@ -32,7 +32,7 @@ async function triggerUpdateData() {
   state.loading = true;
   m.redraw();
   try {
-    //state.participationSummary = await getParticipationSummary(state.network);
+    state.participationSummary = await getParticipationSummary(state.network);
   } catch (e) {
     state.participationSummary = undefined;
   }
