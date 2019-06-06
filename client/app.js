@@ -32,7 +32,7 @@ async function triggerUpdateData() {
   state.loading = true;
   m.redraw();
   try {
-    state.participationSummary = await getParticipationSummary(state.network);
+    //state.participationSummary = await getParticipationSummary(state.network);
   } catch (e) {
     state.participationSummary = undefined;
   }
@@ -48,26 +48,24 @@ async function triggerUpdateData() {
 
 const Pie = {
   view: (vnode) => {
-    if (!vnode.attrs.getData || !vnode.attrs.unit || !vnode.attrs.title || !vnode.attrs.id) return;
+    if (!vnode.attrs.getData || !vnode.attrs.id) return;
     return m('.chart', [
       m('canvas', {
         id: vnode.attrs.id,
         oncreate: (canvas) => {
-          const data = vnode.attrs.getData();
+          const { data, title, unit } = vnode.attrs.getData();
           const ctx = canvas.dom.getContext('2d');
-          console.log(data);
           vnode.state.chart = new Chart(ctx, {
             type: 'pie',
             data: data,
             options: {
               responsive: true,
               legend: { reverse: true, position: 'bottom' },
-              title: { display: true, text: vnode.attrs.title, fontSize: 14 },
+              title: { display: true, text: title, fontSize: 14 },
               tooltips: {
                 callbacks: {
                   label: (tooltipItem, data) =>
-                    formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ' +
-                    vnode.attrs.unit
+                    formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ' + unit
                 }
               }
             }
@@ -91,8 +89,6 @@ const App = {
         ] : [
           m(Pie, {
             id: 'ETH_CHART',
-            title: 'ETH locked or signaled',
-            unit: 'ETH',
             getData: () => {
               const summary = state.participationSummary;
               const ethDistribution = [ summary.totalETHLocked, summary.totalETHSignaled ].reverse();
@@ -101,15 +97,17 @@ const App = {
                 'Signaled: ' + formatNumber(summary.totalETHSignaled) + ' ETH',
               ].reverse();
               return {
-                datasets: [{ data: ethDistribution, backgroundColor: CHART_COLORS, }],
-                labels: ethDistributionLabels,
+                title: 'ETH locked or signaled',
+                unit: 'ETH',
+                data: {
+                  datasets: [{ data: ethDistribution, backgroundColor: CHART_COLORS, borderWidth: 1, }],
+                  labels: ethDistributionLabels,
+                }
               };
             }
           }),
           m(Pie, {
             id: 'EFFECTIVE_ETH_CHART',
-            title: 'EDG distribution',
-            unit: 'EDG',
             getData: () => {
               const summary = state.participationSummary;
               const totalEffectiveETH = summary.totalEffectiveETHLocked + summary.totalEffectiveETHSignaled;
@@ -124,8 +122,12 @@ const App = {
                 'Other: ' + (100 * otherEDG / totalEDG).toFixed(1) + '%',
               ].reverse();
               return {
-                datasets: [{ data: edgDistribution, backgroundColor: CHART_COLORS, }],
-                labels: edgDistributionLabels,
+                title: 'EDG distribution',
+                unit: 'EDG',
+                data: {
+                  datasets: [{ data: edgDistribution, backgroundColor: CHART_COLORS, borderWidth: 1, }],
+                  labels: edgDistributionLabels,
+                }
               };
             }
           }),
@@ -137,46 +139,49 @@ const App = {
               const lockDistribution = Object.keys(summary.locks).map(l => summary.locks[l].lockAmt).sort((a, b) => a - b);;
               const colors = randomColor({ count: lockParticipants.length });
               return {
-                datasets: [{ data: lockDistribution, backgroundColor: colors, }],
+                title: `Lockers (${lockParticipants.length})`,
+                unit: 'ETH',
+                data: {
+                  datasets: [{ data: lockDistribution, backgroundColor: colors, borderWidth: 1, }],
+                },
               }
             },
-            title: 'Locks Distribution',
-            unit: 'ETH',
           }),
           m(Pie, {
             id: 'EFFECTIVE_LOCKS_DISTRIBUTION_CHART',
-            title: 'Effective Locks Distribution',
-            unit: 'ETH',
             getData: () => {
               const summary = state.participationSummary;
               const lockParticipants = Object.keys(summary.locks);
               const effectiveLocksDistribution = Object.keys(summary.locks).map(l => summary.locks[l].effectiveValue).sort((a, b) => a - b);;
               const colors = randomColor({ count: lockParticipants.length });
               return {
-                datasets: [{ data: effectiveLocksDistribution, backgroundColor: colors, }],
+                title: 'Lockers Effective ETH',
+                unit: 'ETH',
+                data: {
+                  datasets: [{ data: effectiveLocksDistribution, backgroundColor: colors, borderWidth: 1, }],
+                }
               };
             },
           }),
 
           m(Pie, {
             id: 'VALIDATING_LOCK_DISTRIBUTION_CHART',
-            title: 'Validating Locks Distribution',
-            unit: 'ETH',
             getData: () => {
               const summary = state.participationSummary;
               const validatingParticipants = Object.keys(summary.validatingLocks);
               const validatingDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].lockAmt).sort((a, b) => a - b);
               const colors = randomColor({ count: validatingParticipants.length });
-
               return {
-                datasets: [{ data: validatingDistribution, backgroundColor: colors, }],
+                title: `Validating Lockers (${validatingParticipants.length})`,
+                unit: 'ETH',
+                data: {
+                  datasets: [{ data: validatingDistribution, backgroundColor: colors, borderWidth: 1, }],
+                }
               };
             },
           }),
           m(Pie, {
             id: 'EFFECTIVE_VALIDATING_LOCK_DISTRIBUTION_CHART',
-            title: 'Effective Validating Locks Distribution',
-            unit: 'ETH',
             getData: () => {
               const summary = state.participationSummary;
               const validatingParticipants = Object.keys(summary.validatingLocks);
@@ -184,35 +189,43 @@ const App = {
               const colors = randomColor({ count: validatingParticipants.length });
 
               return {
-                datasets: [{ data: effectiveValDistribution, backgroundColor: colors, }],
+                title: 'Validating Lockers Effective ETH',
+                unit: 'ETH',
+                data: {
+                  datasets: [{ data: effectiveValDistribution, backgroundColor: colors, borderWidth: 1, }],
+                }
               };
             }
           }),
           m(Pie, {
             id: 'SIGNAL_DISTRIBUTION_CHART',
-            title: 'Signals Distribution',
-            unit: 'ETH',
             getData: () => {
               const summary = state.participationSummary;
               const signalParticipants = Object.keys(summary.signals);
               const signalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].signalAmt).sort((a, b) => a - b);
               const colors = randomColor({ count: signalParticipants.length });
               return {
-                datasets: [{ data: signalDistribution, backgroundColor: colors, }],
+                title: `Signalers (${signalParticipants.length})`,
+                unit: 'ETH',
+                data: {
+                  datasets: [{ data: signalDistribution, backgroundColor: colors, borderWidth: 1, }],
+                }
               };
             },
           }),
           m(Pie, {
             id: 'EFFECTIVE_SIGNAL_DISTRIBUTION_CHART',
-            title: 'Effective Signals Distribution',
-            unit: 'ETH',
             getData: () => {
               const summary = state.participationSummary;
               const signalParticipants = Object.keys(summary.signals);
               const effectiveSignalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].effectiveValue).sort((a, b) => a - b);
               const colors = randomColor({ count: signalParticipants.length });
               return {
-                datasets: [{ data: effectiveSignalDistribution, backgroundColor: colors, }],
+                title: 'Signalers Effective ETH',
+                unit: 'ETH',
+                data: {
+                  datasets: [{ data: effectiveSignalDistribution, backgroundColor: colors, borderWidth: 1, }],
+                }
               };
             },
           }),
@@ -305,29 +318,56 @@ const App = {
                 vnode.state.lookupLoading = true;
                 state.addressSummary = await getAddressSummary(addr, state.network);
                 vnode.state.lookupLoading = false;
+                m.redraw();
               }
             }
           }, vnode.state.lookupLoading ? 'Loading...' : 'Lookup'),
           m('div', [
-            state.addressSummary && m('ul#LOCK_LOOKUP_RESULTS', state.addressSummary.events.map((event) => {
+            state.addressSummary && m('ul#LOCK_LOOKUP_RESULTS', {
+              oncreate: (vnode) => {
+                $('html, body').animate({ scrollTop: $(vnode.dom).height() - 200 }, 500);
+              }
+            }, state.addressSummary.events.map((event) => {
+              const etherscanNet = state.network === 'mainnet' ? 'https://etherscan.io/' : 'https://ropsten.etherscan.io/';
+              debugger;
               return m('li', [
                 m('h3', (event.type === 'signal') ? 'Signal Event' : 'Lock Event'),
                 m('p', [
                   'Tx Hash: ',
-                  m('a', { href: `${etherscanNet}${event.data.transactionHash}`, target: '_blank' }, data.transactionHash),
+                  m('a', {
+                    href: `${etherscanNet}tx/${event.data.transactionHash}`,
+                    target: '_blank'
+                  }, event.data.transactionHash),
                 ]),
                 event.type === 'signal' ? [
-                  m('p', `ETH Signaled: ${event.eth.toFixed(2)}`),
-                  m('p', `Signaling Address: ${event.data.returnValues.contractAddr}`),
-                  m('p', `EDG Keys: ${event.data.returnValues.edgewareAddr}`),
-                  m('p', `Signal Time: ${event.data.returnValues.time}`),
+                  m('p', [
+                    'Signaling Address: ',
+                    m('a', {
+                      href: `${etherscanNet}address/${event.data.returnValues.contractAddr}`,
+                      target: '_blank',
+                    }, event.data.returnValues.contractAddr),
+                  ]),
+                  m('p', `EDG Public Keys: ${event.data.returnValues.edgewareAddr}`),
+                  m('p', `Current ETH in Signaled Account: ${event.eth.toFixed(2)}`),
                 ] : [
+                  m('p', [
+                    'Owner Address: ',
+                    m('a', {
+                      href: `${etherscanNet}address/${event.data.returnValues.owner}`,
+                      target: '_blank',
+                    }, event.data.returnValues.owner),
+                  ]),
+                  m('p', [
+                    'Lockdrop User Contract Address: ',
+                    m('a', {
+                      href: `${etherscanNet}address/${event.data.returnValues.lockAddr}`,
+                      target: '_blank',
+                    }, event.data.returnValues.lockAddr),
+                  ]),
+                  m('p', `EDG Public Keys: ${event.data.returnValues.edgewareAddr}`),
                   m('p', `ETH Locked: ${event.eth.toFixed(2)}`),
-                  m('p', `Owner Address: ${event.data.returnValues.owner}`),
-                  m('p', `LUC Address: ${event.data.returnValues.lockAddr}`),
                   m('p', `Term Length: ${(event.data.returnValues.term === '0') ? '3 months' : (event.data.returnValues.term === '1') ? '6 months' : '12 months'}`),
-                  m('p', `EDG Keys: ${event.data.returnValues.edgewareAddr}`),
-                  m('p', `Unlock Time: ${event.unlockTime} minutes`),
+                  m('p', `Unlocks In: ${Math.round(event.unlockTimeMinutes)} minutes`),
                 ],
               ]);
             }))

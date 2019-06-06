@@ -24,7 +24,6 @@ export const getAddressSummary = async (addr, network) => {
     const now = await getCurrentTimestamp(web3);
     const etherscanNet = network === 'mainnet' ? 'https://etherscan.io/tx/' : 'https://ropsten.etherscan.io/tx/';
     const result = [];
-
     // Append only 1 signal event others will not be counted
     if (signalEvents.length > 0) {
       const balance = await web3.eth.getBalance(signalEvents[0].returnValues.contractAddr);
