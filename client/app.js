@@ -46,6 +46,38 @@ async function triggerUpdateData() {
   m.redraw();
 }
 
+const Pie = {
+  view: (vnode) => {
+    if (!vnode.attrs.getData || !vnode.attrs.unit || !vnode.attrs.title || !vnode.attrs.id) return;
+    return m('.chart', [
+      m('canvas', {
+        id: vnode.attrs.id,
+        oncreate: (canvas) => {
+          const data = vnode.attrs.getData();
+          const ctx = canvas.dom.getContext('2d');
+          console.log(data);
+          vnode.state.chart = new Chart(ctx, {
+            type: 'pie',
+            data: data,
+            options: {
+              responsive: true,
+              legend: { reverse: true, position: 'bottom' },
+              title: { display: true, text: vnode.attrs.title, fontSize: 14 },
+              tooltips: {
+                callbacks: {
+                  label: (tooltipItem, data) =>
+                    formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ' +
+                    vnode.attrs.unit
+                }
+              }
+            }
+          });
+        }
+      })
+    ]);
+  }
+};
+
 const App = {
   view: (vnode) => {
     return m('.App', [
@@ -57,250 +89,133 @@ const App = {
           state.loading && m('#CHART_LOADING', 'Loading...'),
           state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
         ] : [
-          m('.chart', [
-            m('canvas#ETH_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const ethDistribution = [ summary.totalETHLocked, summary.totalETHSignaled ].reverse();
-                const ethDistributionLabels = [
-                  'Locked: ' + formatNumber(summary.totalETHLocked) + ' ETH',
-                  'Signaled: ' + formatNumber(summary.totalETHSignaled) + ' ETH',
-                ].reverse();
-
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: ethDistribution, backgroundColor: CHART_COLORS, }],
-                    labels: ethDistributionLabels,
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'ETH locked or signaled', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
-                      }
-                    }
-                  }
-                });
+          m(Pie, {
+            id: 'ETH_CHART',
+            title: 'ETH locked or signaled',
+            unit: 'ETH',
+            getData: () => {
+              const summary = state.participationSummary;
+              const ethDistribution = [ summary.totalETHLocked, summary.totalETHSignaled ].reverse();
+              const ethDistributionLabels = [
+                'Locked: ' + formatNumber(summary.totalETHLocked) + ' ETH',
+                'Signaled: ' + formatNumber(summary.totalETHSignaled) + ' ETH',
+              ].reverse();
+              return {
+                datasets: [{ data: ethDistribution, backgroundColor: CHART_COLORS, }],
+                labels: ethDistributionLabels,
+              };
+            }
+          }),
+          m(Pie, {
+            id: 'EFFECTIVE_ETH_CHART',
+            title: 'EDG distribution',
+            unit: 'EDG',
+            getData: () => {
+              const summary = state.participationSummary;
+              const totalEffectiveETH = summary.totalEffectiveETHLocked + summary.totalEffectiveETHSignaled;
+              const lockersEDG = 4500000000 * summary.totalEffectiveETHLocked / totalEffectiveETH;
+              const signalersEDG = 4500000000 * summary.totalEffectiveETHSignaled / totalEffectiveETH;
+              const otherEDG = 500000000;
+              const totalEDG = 5000000000;
+              const edgDistribution = [ lockersEDG, signalersEDG, otherEDG ].reverse();
+              const edgDistributionLabels = [
+                'Lockers: ' + (100 * lockersEDG / totalEDG).toFixed(1) + '%',
+                'Signalers: ' + (100 * signalersEDG / totalEDG).toFixed(1) + '%',
+                'Other: ' + (100 * otherEDG / totalEDG).toFixed(1) + '%',
+              ].reverse();
+              return {
+                datasets: [{ data: edgDistribution, backgroundColor: CHART_COLORS, }],
+                labels: edgDistributionLabels,
+              };
+            }
+          }),
+          m(Pie, {
+            id: 'LOCK_DISTRIBUTION_CHART',
+            getData: () => {
+              const summary = state.participationSummary;
+              const lockParticipants = Object.keys(summary.locks);
+              const lockDistribution = Object.keys(summary.locks).map(l => summary.locks[l].lockAmt).sort((a, b) => a - b);;
+              const colors = randomColor({ count: lockParticipants.length });
+              return {
+                datasets: [{ data: lockDistribution, backgroundColor: colors, }],
               }
-            })
-          ]),
-          m('.chart', [
-            m('canvas#EFFECTIVE_ETH_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const totalEffectiveETH = summary.totalEffectiveETHLocked + summary.totalEffectiveETHSignaled;
-                const lockersEDG = 4500000000 * summary.totalEffectiveETHLocked / totalEffectiveETH;
-                const signalersEDG = 4500000000 * summary.totalEffectiveETHSignaled / totalEffectiveETH;
-                const otherEDG = 500000000;
-                const totalEDG = 5000000000;
-                const edgDistribution = [ lockersEDG, signalersEDG, otherEDG ].reverse();
-                const edgDistributionLabels = [
-                  'Lockers: ' + (100 * lockersEDG / totalEDG).toFixed(1) + '%',
-                  'Signalers: ' + (100 * signalersEDG / totalEDG).toFixed(1) + '%',
-                  'Other: ' + (100 * otherEDG / totalEDG).toFixed(1) + '%',
-                ].reverse();
+            },
+            title: 'Locks Distribution',
+            unit: 'ETH',
+          }),
+          m(Pie, {
+            id: 'EFFECTIVE_LOCKS_DISTRIBUTION_CHART',
+            title: 'Effective Locks Distribution',
+            unit: 'ETH',
+            getData: () => {
+              const summary = state.participationSummary;
+              const lockParticipants = Object.keys(summary.locks);
+              const effectiveLocksDistribution = Object.keys(summary.locks).map(l => summary.locks[l].effectiveValue).sort((a, b) => a - b);;
+              const colors = randomColor({ count: lockParticipants.length });
+              return {
+                datasets: [{ data: effectiveLocksDistribution, backgroundColor: colors, }],
+              };
+            },
+          }),
 
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: edgDistribution, backgroundColor: CHART_COLORS, }],
-                    labels: edgDistributionLabels,
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'EDG distribution', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' EDG'
-                      }
-                    }
-                  }
-                });
-              }
-            }),
-          ]),
-          m('.chart', [
-            m('canvas#LOCK_DISTRIBUTION_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const lockParticipants = Object.keys(summary.locks);
-                const lockDistribution = Object.keys(summary.locks).map(l => summary.locks[l].lockAmt).sort((a, b) => a - b);;
-                const colors = randomColor({ count: lockParticipants.length });
+          m(Pie, {
+            id: 'VALIDATING_LOCK_DISTRIBUTION_CHART',
+            title: 'Validating Locks Distribution',
+            unit: 'ETH',
+            getData: () => {
+              const summary = state.participationSummary;
+              const validatingParticipants = Object.keys(summary.validatingLocks);
+              const validatingDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].lockAmt).sort((a, b) => a - b);
+              const colors = randomColor({ count: validatingParticipants.length });
 
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: lockDistribution, backgroundColor: colors, }],
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'Locks Distribution', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
-                      }
-                    }
-                  }
-                });
-              }
-            })
-          ]),
-          m('.chart', [
-            m('canvas#EFFECTIVE_LOCKS_DISTRIBUTION_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const lockParticipants = Object.keys(summary.locks);
-                const effectiveLocksDistribution = Object.keys(summary.locks).map(l => summary.locks[l].effectiveValue).sort((a, b) => a - b);;
-                const colors = randomColor({ count: lockParticipants.length });
+              return {
+                datasets: [{ data: validatingDistribution, backgroundColor: colors, }],
+              };
+            },
+          }),
+          m(Pie, {
+            id: 'EFFECTIVE_VALIDATING_LOCK_DISTRIBUTION_CHART',
+            title: 'Effective Validating Locks Distribution',
+            unit: 'ETH',
+            getData: () => {
+              const summary = state.participationSummary;
+              const validatingParticipants = Object.keys(summary.validatingLocks);
+              const effectiveValDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].effectiveValue).sort((a, b) => a - b);
+              const colors = randomColor({ count: validatingParticipants.length });
 
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: effectiveLocksDistribution, backgroundColor: colors, }],
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'Effective Locks Distribution', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
-                      }
-                    }
-                  }
-                });
-              }
-            })
-          ]),
-          m('.chart', [
-            m('canvas#VALIDATING_LOCK_DISTRIBUTION_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const validatingParticipants = Object.keys(summary.validatingLocks);
-                const validatingDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].lockAmt).sort((a, b) => a - b);
-                const colors = randomColor({ count: validatingParticipants.length });
-
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: validatingDistribution, backgroundColor: colors, }],
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'Validating Locks Distribution', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
-                      }
-                    }
-                  }
-                });
-              }
-            })
-          ]),
-          m('.chart', [
-            m('canvas#EFFECTIVE_VALIDATING_LOCK_DISTRIBUTION_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const validatingParticipants = Object.keys(summary.validatingLocks);
-                const effectiveValDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].effectiveValue).sort((a, b) => a - b);
-                const colors = randomColor({ count: validatingParticipants.length });
-
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: effectiveValDistribution, backgroundColor: colors, }],
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'Effective Validating Locks Distribution', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
-                      }
-                    }
-                  }
-                });
-              }
-            })
-          ]),
-          m('.chart', [
-            m('canvas#SIGNAL_DISTRIBUTION_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const signalParticipants = Object.keys(summary.signals);
-                const signalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].signalAmt).sort((a, b) => a - b);
-                const colors = randomColor({ count: signalParticipants.length });
-
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: signalDistribution, backgroundColor: colors, }],
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'Signals Distribution', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
-                      }
-                    }
-                  }
-                });
-              }
-            })
-          ]),
-          m('.chart', [
-            m('canvas#EFFECTIVE_SIGNAL_DISTRIBUTION_CHART', {
-              oncreate: (vnode) => {
-                const summary = state.participationSummary;
-                const signalParticipants = Object.keys(summary.signals);
-                const effectiveSignalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].effectiveValue).sort((a, b) => a - b);
-                const colors = randomColor({ count: signalParticipants.length });
-
-                const ctx = vnode.dom.getContext('2d');
-                vnode.state.chart = new Chart(ctx, {
-                  type: 'pie',
-                  data: {
-                    datasets: [{ data: effectiveSignalDistribution, backgroundColor: colors, }],
-                  },
-                  options: {
-                    responsive: true,
-                    legend: { reverse: true, position: 'bottom' },
-                    title: { display: true, text: 'Effective Signals Distribution', fontSize: 14 },
-                    tooltips: {
-                      callbacks: {
-                        label: (tooltipItem, data) =>
-                          formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ETH'
-                      }
-                    }
-                  }
-                });
-              }
-            })
-          ]),
+              return {
+                datasets: [{ data: effectiveValDistribution, backgroundColor: colors, }],
+              };
+            }
+          }),
+          m(Pie, {
+            id: 'SIGNAL_DISTRIBUTION_CHART',
+            title: 'Signals Distribution',
+            unit: 'ETH',
+            getData: () => {
+              const summary = state.participationSummary;
+              const signalParticipants = Object.keys(summary.signals);
+              const signalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].signalAmt).sort((a, b) => a - b);
+              const colors = randomColor({ count: signalParticipants.length });
+              return {
+                datasets: [{ data: signalDistribution, backgroundColor: colors, }],
+              };
+            },
+          }),
+          m(Pie, {
+            id: 'EFFECTIVE_SIGNAL_DISTRIBUTION_CHART',
+            title: 'Effective Signals Distribution',
+            unit: 'ETH',
+            getData: () => {
+              const summary = state.participationSummary;
+              const signalParticipants = Object.keys(summary.signals);
+              const effectiveSignalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].effectiveValue).sort((a, b) => a - b);
+              const colors = randomColor({ count: signalParticipants.length });
+              return {
+                datasets: [{ data: effectiveSignalDistribution, backgroundColor: colors, }],
+              };
+            },
+          }),
           m('.clear'),
         ]),
         m('.form-field', [
