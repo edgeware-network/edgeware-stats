@@ -32,7 +32,7 @@ async function triggerUpdateData() {
   state.loading = true;
   m.redraw();
   try {
-    //state.participationSummary = await getParticipationSummary(state.network);
+    state.participationSummary = await getParticipationSummary(state.network);
   } catch (e) {
     state.participationSummary = undefined;
   }
@@ -132,7 +132,7 @@ const App = {
               oncreate: (vnode) => {
                 const summary = state.participationSummary;
                 const lockParticipants = Object.keys(summary.locks);
-                const lockDistribution = Object.keys(summary.locks).map(l => summary.locks[l].lockAmt);
+                const lockDistribution = Object.keys(summary.locks).map(l => summary.locks[l].lockAmt).sort((a, b) => a - b);;
                 const colors = randomColor({ count: lockParticipants.length });
 
                 const ctx = vnode.dom.getContext('2d');
@@ -161,7 +161,7 @@ const App = {
               oncreate: (vnode) => {
                 const summary = state.participationSummary;
                 const lockParticipants = Object.keys(summary.locks);
-                const effectiveLocksDistribution = Object.keys(summary.locks).map(l => summary.locks[l].effectiveValue);
+                const effectiveLocksDistribution = Object.keys(summary.locks).map(l => summary.locks[l].effectiveValue).sort((a, b) => a - b);;
                 const colors = randomColor({ count: lockParticipants.length });
 
                 const ctx = vnode.dom.getContext('2d');
@@ -190,7 +190,7 @@ const App = {
               oncreate: (vnode) => {
                 const summary = state.participationSummary;
                 const validatingParticipants = Object.keys(summary.validatingLocks);
-                const validatingDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].lockAmt);
+                const validatingDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].lockAmt).sort((a, b) => a - b);
                 const colors = randomColor({ count: validatingParticipants.length });
 
                 const ctx = vnode.dom.getContext('2d');
@@ -219,7 +219,7 @@ const App = {
               oncreate: (vnode) => {
                 const summary = state.participationSummary;
                 const validatingParticipants = Object.keys(summary.validatingLocks);
-                const effectiveValDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].effectiveValue);
+                const effectiveValDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].effectiveValue).sort((a, b) => a - b);
                 const colors = randomColor({ count: validatingParticipants.length });
 
                 const ctx = vnode.dom.getContext('2d');
@@ -248,7 +248,7 @@ const App = {
               oncreate: (vnode) => {
                 const summary = state.participationSummary;
                 const signalParticipants = Object.keys(summary.signals);
-                const signalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].signalAmt);
+                const signalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].signalAmt).sort((a, b) => a - b);
                 const colors = randomColor({ count: signalParticipants.length });
 
                 const ctx = vnode.dom.getContext('2d');
@@ -277,7 +277,7 @@ const App = {
               oncreate: (vnode) => {
                 const summary = state.participationSummary;
                 const signalParticipants = Object.keys(summary.signals);
-                const effectiveSignalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].effectiveValue);
+                const effectiveSignalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].effectiveValue).sort((a, b) => a - b);
                 const colors = randomColor({ count: signalParticipants.length });
 
                 const ctx = vnode.dom.getContext('2d');
