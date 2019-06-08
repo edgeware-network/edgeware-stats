@@ -139,14 +139,17 @@ const App = {
       m('.container.body-container', [
         m('.disclaimer', 'This is a BETA version of the updated stats page.'),
         m('.charts', !state.participationSummary ? [
-          state.loading && m('#CHART_LOADING', 'Loading...'),
+          state.loading && m('#CHART_LOADING', [
+            'Loading...',
+            m('br'),
+            '(Metamask users: accept or reject the prompt to continue.)'
+          ]),
           state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
         ] : [
           m(Line, {
             id: 'NUM_PARTICIPANTS_CHART',
             getData: () => {
               const summary = state.participationSummary;
-              debugger;
               return {
                 title: 'Number of participation events',
                 data: {
@@ -169,7 +172,6 @@ const App = {
             id: 'ETH_LOCKED_CHART',
             getData: () => {
               const summary = state.participationSummary;
-              debugger;
               return {
                 title: 'ETH Locked',
                 data: {
