@@ -142,7 +142,7 @@ const App = {
           state.loading && m('#CHART_LOADING', [
             'Loading...',
             m('br'),
-            '(Metamask users: accept or reject the prompt to continue.)'
+            '(Metamask users: You must first accept or reject the prompt to continue.)'
           ]),
           state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
         ] : [
