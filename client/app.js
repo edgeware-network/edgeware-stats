@@ -129,15 +129,15 @@ const App = {
       ]),
       m('.menu', [
         m('container', [
-          m('a.menu-item', { href: '/lockdrop' }, 'Lockdrop'),
-          m('a.menu-item', { href: '/lockdrop/gettingstarted.html' }, 'Instructions'),
-          m('a.menu-item', { href: '/keygen' }, 'Key Generator'),
-          m('a.menu-item', { href: '/lockdrop/stats.html' }, 'Participation Statistics'),
-          m('a.menu-item', { href: '/' }, 'Homepage'),
+          m('a.menu-item', { href: 'https://edgewa.re/lockdrop' }, 'Lockdrop'),
+          m('a.menu-item', { href: 'https://edgewa.re/lockdrop/gettingstarted.html' }, 'Instructions'),
+          m('a.menu-item', { href: 'https://edgewa.re/keygen' }, 'Key Generator'),
+          m('a.menu-item', { href: '#' }, 'Participation Statistics'),
+          m('a.menu-item', { href: 'https://edgewa.re/' }, 'Homepage'),
         ])
       ]),
       m('.container.body-container', [
-        m('.disclaimer', 'This is a BETA version of the updated stats page.'),
+        m('.disclaimer', 'This is a BETA version of the updated stats page. Signaled funds may be recognized as a 3-month lock under the generalized lock policy. No individual participating account will be assigned more than 20% of EDG. This page is provided for informational purposes only; no data shown on this page should be construed as final or a commitment to deliver any amount or allocation of EDG.'),
         m('.charts', !state.participationSummary ? [
           state.loading && m('#CHART_LOADING', [
             'Loading...',
