@@ -26,6 +26,7 @@ module.exports = {
     new CleanWebpackPlugin(['build'], { root: Path.resolve(__dirname, '..') }),
     new CopyWebpackPlugin([
       { from: Path.resolve(__dirname, '../public'), to: 'public' },
+      { from: Path.resolve(__dirname, '../client/now.json'), to: '.' },
     ]),
     new HtmlWebpackPlugin({
       template: Path.resolve(__dirname, '../client/index.html')
