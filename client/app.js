@@ -11,6 +11,14 @@ import { getParticipationSummary, getAddressSummary } from './helpers';
 
 const CHART_COLORS = [ '#ff6383', '#ff9f40', '#ffcd56', '#4bc0c0', '#36a2eb', ];
 
+const blocknumToTime = (blocknum) => {
+  return `Block#${blocknum}`;
+};
+
+const formatDate = (d) => {
+  return d.toISOString().replace('T', ' ').replace('.000Z', ' UTC');
+};
+
 const formatNumber = (num) => {
   // formats large numbers with commas
   const nf = new Intl.NumberFormat();
@@ -76,17 +84,110 @@ const Pie = {
   }
 };
 
+const Line = {
+  view: (vnode) => {
+    if (!vnode.attrs.getData || !vnode.attrs.id) return;
+    return m('.chart', [
+      m('canvas', {
+        id: vnode.attrs.id,
+        oncreate: (canvas) => {
+          const { data, title } = vnode.attrs.getData();
+          const ctx = canvas.dom.getContext('2d');
+          vnode.state.chart = new Chart(ctx, {
+            type: 'scatter',
+            data: data,
+            options: {
+              responsive: true,
+              title: { display: true, text: title, fontSize: 14 },
+              tooltips: {
+                callbacks: {
+                  label: (tooltipItem, data) => {
+                    const dataset = data.datasets[tooltipItem.datasetIndex];
+                    const item = dataset.data[tooltipItem.index];
+                    return dataset.formatter ? dataset.formatter(item) : item.toString();
+                  }
+                }
+              },
+              // performance optimizations
+              animation: { duration: 0 },
+              hover: { animationDuration: 0 },
+              responsiveAnimationDuration: 0,
+              elements: { line: { tension: 0 } },
+            }
+          });
+        }
+      })
+    ]);
+  }
+};
+
 const App = {
   view: (vnode) => {
     return m('.App', [
       m('.header', [
         m('.container', 'Edgeware Lockdrop'),
       ]),
+      m('.menu', [
+        m('container', [
+          m('a.menu-item', { href: '/lockdrop' }, 'Lockdrop'),
+          m('a.menu-item', { href: '/lockdrop/gettingstarted.html' }, 'Instructions'),
+          m('a.menu-item', { href: '/keygen' }, 'Key Generator'),
+          m('a.menu-item', { href: '/lockdrop/stats.html' }, 'Participation Statistics'),
+          m('a.menu-item', { href: '/' }, 'Homepage'),
+        ])
+      ]),
       m('.container.body-container', [
+        m('.disclaimer', 'This is a BETA version of the updated stats page.'),
         m('.charts', !state.participationSummary ? [
           state.loading && m('#CHART_LOADING', 'Loading...'),
           state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
         ] : [
+          m(Line, {
+            id: 'NUM_PARTICIPANTS_CHART',
+            getData: () => {
+              const summary = state.participationSummary;
+              debugger;
+              return {
+                title: 'Number of participation events',
+                data: {
+                  datasets: [{
+                    label: 'Number of participation events',
+                    backgroundColor: 'rgb(255, 99, 132)',
+		    borderColor: 'rgb(255, 99, 132)',
+                    borderWidth: 1,
+                    pointRadius: 1,
+                    data: summary.participantsByBlock,
+                    fill: false,
+                    formatter: (d) => [`${d.y} ${d.y === 1 ? 'participant' : 'participants'}`,
+                                       formatDate(summary.blocknumToTime[d.x]) + ' (approx.)'],
+                  }]
+                }
+              };
+            }
+          }),
+          m(Line, {
+            id: 'ETH_LOCKED_CHART',
+            getData: () => {
+              const summary = state.participationSummary;
+              debugger;
+              return {
+                title: 'ETH Locked',
+                data: {
+                  datasets: [{
+                    label: 'ETH locked',
+                    backgroundColor: 'rgb(255, 99, 132)',
+		    borderColor: 'rgb(255, 99, 132)',
+                    borderWidth: 1,
+                    pointRadius: 1,
+                    data: summary.ethLockedByBlock,
+                    fill: false,
+                    formatter: (d) => [`${d.y.toFixed(2)} ETH`,
+                                       formatDate(summary.blocknumToTime[d.x]) + ' (approx.)'],
+                  }]
+                }
+              };
+            }
+          }),
           m(Pie, {
             id: 'ETH_CHART',
             getData: () => {
@@ -329,7 +430,6 @@ const App = {
               }
             }, state.addressSummary.events.map((event) => {
               const etherscanNet = state.network === 'mainnet' ? 'https://etherscan.io/' : 'https://ropsten.etherscan.io/';
-              debugger;
               return m('li', [
                 m('h3', (event.type === 'signal') ? 'Signal Event' : 'Lock Event'),
                 m('p', [

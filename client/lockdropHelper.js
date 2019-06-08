@@ -18,6 +18,26 @@ export const isHex = (inputString) => {
   return result;
 };
 
+let cachedLocks, cachedSignals;
+
+export const getAllSignals = async (lockdropContract) => {
+  if (cachedSignals) return cachedSignals;
+  cachedSignals = await lockdropContract.getPastEvents('Signaled', {
+    fromBlock: 0,
+    toBlock: 'latest',
+  });
+  return cachedSignals;
+};
+
+export const getAllLocks = async (lockdropContract) => {
+  if (cachedLocks) return cachedLocks;
+  cachedLocks = await lockdropContract.getPastEvents('Locked', {
+    fromBlock: 0,
+    toBlock: 'latest',
+  });
+  return cachedLocks;
+};
+
 export const getLocks = async (lockdropContract, address) => {
   return await lockdropContract.getPastEvents('Locked', {
     fromBlock: 0,
@@ -83,10 +103,7 @@ export const calculateEffectiveLocks = async (lockdropContract, web3) => {
   let totalETHLocked = web3.utils.toBN(0);
   let totalEffectiveETHLocked = web3.utils.toBN(0);
   // Get all lock events
-  const lockEvents = await lockdropContract.getPastEvents('Locked', {
-    fromBlock: 0,
-    toBlock: 'latest',
-  });
+  const lockEvents = await getAllLocks(lockdropContract);
   // Compatibility with all contract formats
   let lockdropStartTime = await lockdropContract.methods.LOCK_START_TIME().call();
   // Add balances and effective values to total
@@ -111,7 +128,7 @@ export const calculateEffectiveLocks = async (lockdropContract, web3) => {
           effectiveValue: value,
           lockAddrs: [data.lockAddr],
         };
-      } 
+      }
     }
     // Add all lockers to a collection for data processing
     if (data.edgewareAddr in locks) {
@@ -142,10 +159,8 @@ export const calculateEffectiveSignals = async (lockdropContract, web3, blockNum
   let totalETHSignaled = web3.utils.toBN(0);
   let totalEffectiveETHSignaled = web3.utils.toBN(0);
   let signals = {};
-  const signalEvents = await lockdropContract.getPastEvents('Signaled', {
-    fromBlock: 0,
-    toBlock: 'latest',
-  });
+  // Get all signaled events
+  const signalEvents = await getAllSignals(lockdropContract);
   // Filter duplicate signals based on sending address
   let seen = {};
   let signalers = signalEvents.map((event) => {
@@ -190,6 +205,53 @@ export const calculateEffectiveSignals = async (lockdropContract, web3, blockNum
     totalEffectiveETHSignaled,
     numSignals: signalEvents.length
   };
+}
+
+export const getCountsByBlock = async (web3) => {
+  const locks = await getAllLocks();
+  const signals = await getAllSignals();
+  const allEvents = locks.concat(signals);
+  locks.sort((a, b) => a.blockNumber - b.blockNumber);
+  signals.sort((a, b) => a.blockNumber - b.blockNumber);
+  allEvents.sort((a, b) => a.blockNumber - b.blockNumber);
+
+  // set number of blocks to quantize our x-axis to
+  const roundToBlocks = 600;
+
+  const reduceOverBlocks = (blocks, valueGetter) => {
+    return blocks.reduce((acc, value) => {
+      const blockNumber = Math.ceil(value.blockNumber / roundToBlocks) * roundToBlocks;
+      if (acc[acc.length - 1].x === blockNumber) {
+        acc[acc.length - 1].y = acc[acc.length - 1].y + valueGetter(value);
+      } else {
+        acc.push({
+          x: blockNumber,
+          y: acc[acc.length - 1].y + valueGetter(value),
+        });
+      }
+      return acc;
+    }, [{ x: Math.floor(blocks[0].blockNumber / roundToBlocks) * roundToBlocks, y: 0 }]);
+  };
+
+  // TODO: This code assumes there is at least one event of each type
+  // number of participants, by blocknum
+  const participantsByBlock = reduceOverBlocks(allEvents, (value) => 1);
+  const ethLockedByBlock = reduceOverBlocks(
+    locks, (value) => Number(web3.utils.fromWei(web3.utils.toBN(value.returnValues.eth), 'ether')));
+  const ethSignaledByBlock = [];
+  const effectiveETHByBlock = [];
+
+  // construct array converting blocknums to time
+  const blocknumToTime = {};
+  allEvents.map((event) => {
+    blocknumToTime[event.blockNumber] = new Date(+web3.utils.toBN(event.returnValues.time) * 1000);
+    blocknumToTime[Math.ceil(event.blockNumber / roundToBlocks) * roundToBlocks] =
+      new Date(+web3.utils.toBN(event.returnValues.time) * 1000);
+  });
+  blocknumToTime[Math.floor(allEvents[0].blockNumber / roundToBlocks) * roundToBlocks] =
+    new Date(+web3.utils.toBN(allEvents[0].returnValues.time) * 1000);
+
+  return { participantsByBlock, ethLockedByBlock, ethSignaledByBlock, effectiveETHByBlock, blocknumToTime };
 }
 
 function chunkify(signalEvents, batchSize) {

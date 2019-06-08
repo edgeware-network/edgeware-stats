@@ -9,6 +9,7 @@ import {
   ROPSTEN_LOCKDROP,
   calculateEffectiveLocks,
   calculateEffectiveSignals,
+  getCountsByBlock,
   enableInjectedWeb3EthereumConnection,
 } from './lockdropHelper';
 import { constrainZoomExtents } from 'plottable/build/src/interactions/panZoomConstraints';
@@ -58,6 +59,8 @@ export const getParticipationSummary = async (network) => {
   // Get balances of the lockdrop
   let { locks, validatingLocks, totalETHLocked, totalEffectiveETHLocked, numLocks } = await calculateEffectiveLocks(contract, web3);
   let { signals, totalETHSignaled, totalEffectiveETHSignaled, numSignals } = await calculateEffectiveSignals(contract, web3);
+  let { participantsByBlock, ethLockedByBlock, ethSignaledByBlock, effectiveETHByBlock, blocknumToTime } = await getCountsByBlock(web3);
+
   // Calculate some metrics with the lock and signal data
   let totalETH = totalETHLocked.add(totalETHSignaled)
   let totalEffectiveETH = totalEffectiveETHLocked.add(totalEffectiveETHSignaled);
@@ -103,5 +106,8 @@ export const getParticipationSummary = async (network) => {
     numSignals,
     avgLock: Number(web3.utils.fromWei(avgLock, 'ether')),
     avgSignal: Number(web3.utils.fromWei(avgSignal, 'ether')),
+    participantsByBlock,
+    ethLockedByBlock,
+    blocknumToTime,
   };
 }
