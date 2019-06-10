@@ -12,7 +12,6 @@ import {
   getCountsByBlock,
   enableInjectedWeb3EthereumConnection,
 } from './lockdropHelper';
-import { constrainZoomExtents } from 'plottable/build/src/interactions/panZoomConstraints';
 
 export const getAddressSummary = async (addr, network) => {
   return new Promise(async (resolve, reject) => {
@@ -23,7 +22,6 @@ export const getAddressSummary = async (addr, network) => {
     const lockEvents = await getLocks(contract, addr);
     const signalEvents = await getSignals(contract, addr);
     const now = await getCurrentTimestamp(web3);
-    const etherscanNet = network === 'mainnet' ? 'https://etherscan.io/tx/' : 'https://ropsten.etherscan.io/tx/';
     const result = [];
     // Append only 1 signal event others will not be counted
     if (signalEvents.length > 0) {
