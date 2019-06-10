@@ -142,8 +142,11 @@ const App = {
         m('.charts', !state.participationSummary ? [
           state.loading && m('#CHART_LOADING', [
             'Loading...',
-            m('br'),
-            '(Metamask users: First accept or reject the prompt to continue.)'
+            m('p', [
+              'Metamask users: You must first accept or reject the prompt to continue.',
+              m('br'),
+              'If stats do not load, try disabling Metamask.',
+            ])
           ]),
           state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
         ] : [
