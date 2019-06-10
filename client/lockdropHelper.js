@@ -80,8 +80,8 @@ export const getCurrentTimestamp = async (web3) => {
  */
 export function setupWeb3Provider(network, url=null) {
   return (url)
-    ? new Web3(new Web3.providers.HttpProvider(`https://${network}.infura.io`))
-    : new Web3(new Web3.providers.HttpProvider(url));
+    ? new Web3(new Web3.providers.HttpProvider(url))
+    : new Web3(new Web3.providers.HttpProvider(`https://${network}.infura.io`));
 }
 
 /**
@@ -94,7 +94,7 @@ export async function enableInjectedWeb3EthereumConnection(network) {
     return new Web3(provider);
   } catch (error) {
     // Handle error. Likely the user rejected the login:
-    alert('Could not find Web3 provider/Ethereum wallet');
+    console.log('Could not find Web3 provider/Ethereum wallet');
     return setupWeb3Provider(network);
   }
 }
