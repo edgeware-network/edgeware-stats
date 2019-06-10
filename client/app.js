@@ -145,7 +145,7 @@ const App = {
             m('p', [
               'Metamask users: You must first accept or reject the prompt to continue.',
               m('br'),
-              'If stats do not load, try disabling Metamask.',
+              'If stats do not load, try disabling Metamask or opening this page in an Incognito window.',
             ])
           ]),
           state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
