@@ -137,12 +137,13 @@ const App = {
         ])
       ]),
       m('.container.body-container', [
-        m('.disclaimer', 'This is a BETA version of the updated stats page. Signaled funds may be recognized as a 3-month lock under the generalized lock policy. No individual participating account will be assigned more than 20% of EDG. This page is provided for informational purposes only; no data shown on this page should be construed as final or a commitment to deliver any amount or allocation of EDG.'),
+        m('h3', 'Participation Statistics'),
+        m('.disclaimer', 'NOTE: This page is provided for informational purposes only; no data shown on this page should be construed as final or a commitment to deliver any amount or allocation of EDG. Signaled funds may be recognized as a 3-month lock under the generalized lock policy. No individual participating account will be assigned more than 20% of EDG.'),
         m('.charts', !state.participationSummary ? [
           state.loading && m('#CHART_LOADING', [
             'Loading...',
             m('br'),
-            '(Metamask users: You must first accept or reject the prompt to continue.)'
+            '(Metamask users: First accept or reject the prompt to continue.)'
           ]),
           state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
         ] : [
