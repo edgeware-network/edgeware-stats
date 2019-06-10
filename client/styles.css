@@ -382,6 +382,9 @@ button.disabled {
 /*
  * STATS PAGE STYLES
  */
+.disclaimer {
+    color: #aaa;
+}
 .charts {
     width: 100%;
     padding: 20px 0 0;
@@ -394,7 +397,7 @@ button.disabled {
     color: #c0c0c0;
     text-align: center;
     width: 100%;
-    margin-top: 84px;
+    margin-top: 64px;
 }
 .charts .chart {
     float: left;
