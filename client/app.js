@@ -472,7 +472,7 @@ const App = {
                   ]),
                   m('p', `EDG Public Keys: ${event.data.returnValues.edgewareAddr}`),
                   m('p', `ETH Locked: ${event.eth.toFixed(2)}`),
-                  m('p', `Term Length: ${(event.data.returnValues.term === '0') ? '3 months' : (event.data.returnValues.term === '1') ? '6 months' : '12 months'}`),
+                  m('p', `Term Length: ${(event.data.returnValues.term === 0) ? '3 months' : (event.data.returnValues.term === 1) ? '6 months' : '12 months'}`),
                   m('p', `Unlocks In: ${Math.round(event.unlockTimeMinutes)} minutes`),
                 ],
               ]);
