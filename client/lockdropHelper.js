@@ -277,25 +277,28 @@ async function getBalanceByBlocknumber(web3, address, blockNumber) {
 }
 
 function getEffectiveValue(web3, ethAmount, term, lockTime, lockStart, totalETH) {
-  let additiveBonus;
   ethAmount = web3.utils.toBN(ethAmount);
-  // get additive bonus if calculating allocation of locks
+  // get locktime bonus if calculating allocation of locks
+  let earlyParticipationBonus;
   if (lockTime && lockStart) {
     lockTime = web3.utils.toBN(lockTime);
     lockStart = web3.utils.toBN(lockStart);
     totalETH = web3.utils.toBN(totalETH);
-    additiveBonus = getAdditiveBonus(web3, lockTime, lockStart);
+    earlyParticipationBonus = getEarlyParticipationBonus(web3, lockTime, lockStart);
   }
 
   if (term == '0') {
     // three month term yields no bonus
-    return ethAmount.mul(web3.utils.toBN(100).add(additiveBonus)).div(web3.utils.toBN(100));
+    return ethAmount
+      .mul(earlyParticipationBonus).div(web3.utils.toBN(100));
   } else if (term == '1') {
     // six month term yields 30% bonus
-    return ethAmount.mul(web3.utils.toBN(130).add(additiveBonus)).div(web3.utils.toBN(100));
+    return ethAmount.mul(web3.utils.toBN(130)).div(web3.utils.toBN(100))
+      .mul(earlyParticipationBonus).div(web3.utils.toBN(100));
   } else if (term == '2') {
     // twelve month term yields 120% bonus
-    return ethAmount.mul(web3.utils.toBN(220).add(additiveBonus)).div(web3.utils.toBN(100));
+    return ethAmount.mul(web3.utils.toBN(220)).div(web3.utils.toBN(100))
+      .mul(earlyParticipationBonus).div(web3.utils.toBN(100));
   } else if (term == 'signaling') {
     // signaling yields 80% deduction
     return ethAmount.mul(web3.utils.toBN(20)).div(web3.utils.toBN(100));
@@ -306,24 +309,24 @@ function getEffectiveValue(web3, ethAmount, term, lockTime, lockStart, totalETH)
   }
 }
 
-export const getAdditiveBonus = (web3, lockTime, lockStart) => {
+export const getEarlyParticipationBonus = (web3, lockTime, lockStart) => {
   if (!lockStart.eq(web3.utils.toBN(JUNE_1ST_UTC))) {
-    return web3.utils.toBN(0);
+    return web3.utils.toBN(100);
   } else {
     if (web3.utils.toBN(lockTime).lte(web3.utils.toBN(JUNE_16TH_UTC))) {
-      return web3.utils.toBN(50);
+      return web3.utils.toBN(150);
     } else if (web3.utils.toBN(lockTime).lte(web3.utils.toBN(JULY_1ST_UTC))) {
-      return web3.utils.toBN(40);
+      return web3.utils.toBN(140);
     } else if (web3.utils.toBN(lockTime).lte(web3.utils.toBN(JULY_16TH_UTC))) {
-      return web3.utils.toBN(30);
+      return web3.utils.toBN(130);
     } else if (web3.utils.toBN(lockTime).lte(web3.utils.toBN(JULY_31ST_UTC))) {
-      return web3.utils.toBN(20);
+      return web3.utils.toBN(120);
     } else if (web3.utils.toBN(lockTime).lte(web3.utils.toBN(AUG_15TH_UTC))) {
-      return web3.utils.toBN(10);
+      return web3.utils.toBN(110);
     } else if (web3.utils.toBN(lockTime).lte(web3.utils.toBN(AUG_30TH_UTC))) {
-      return web3.utils.toBN(0);
+      return web3.utils.toBN(100);
     } else {
-      return web3.utils.toBN(0);
+      return web3.utils.toBN(100);
     }
   }
 }

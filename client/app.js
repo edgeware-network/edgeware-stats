@@ -42,6 +42,7 @@ async function triggerUpdateData() {
   try {
     state.participationSummary = await getParticipationSummary(state.network);
   } catch (e) {
+    console.error(e);
     state.participationSummary = undefined;
   }
 
