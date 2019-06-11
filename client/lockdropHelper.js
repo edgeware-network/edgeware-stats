@@ -215,6 +215,10 @@ export const getCountsByBlock = async (web3) => {
   signals.sort((a, b) => a.blockNumber - b.blockNumber);
   allEvents.sort((a, b) => a.blockNumber - b.blockNumber);
 
+  if (allEvents.length === 0) {
+    throw new Error('No locking events returned from the API');
+  }
+
   // set number of blocks to quantize our x-axis to
   const roundToBlocks = 600;
 
