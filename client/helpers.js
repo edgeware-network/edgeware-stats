@@ -1,8 +1,9 @@
 import * as $ from 'jquery';
 import {
   getLockStorage,
-  getLocks,
-  getSignals,
+  getLocksFromAddr,
+  getLocksAtAddr,
+  getSignalsFromAddr,
   getCurrentTimestamp,
   setupWeb3Provider,
   MAINNET_LOCKDROP,
@@ -13,37 +14,45 @@ import {
   enableInjectedWeb3EthereumConnection,
 } from './lockdropHelper';
 
-export const getAddressSummary = async (addr, network) => {
+export const getAddressSummary = async (addrs, network) => {
   return new Promise(async (resolve, reject) => {
     const lockdropContractAddress = network === 'mainnet' ? MAINNET_LOCKDROP : ROPSTEN_LOCKDROP;
     const json = await $.getJSON('public/Lockdrop.json');
     const web3 = await enableInjectedWeb3EthereumConnection(network);
     const contract = new web3.eth.Contract(json.abi, lockdropContractAddress);
-    const lockEvents = await getLocks(contract, addr);
-    const signalEvents = await getSignals(contract, addr);
     const now = await getCurrentTimestamp(web3);
     const result = [];
-    // Append only 1 signal event others will not be counted
-    if (signalEvents.length > 0) {
-      const balance = await web3.eth.getBalance(signalEvents[0].returnValues.contractAddr);
-      result.push({
-        type: 'signal',
-        data: signalEvents[0],
-        eth: Number(web3.utils.fromWei(balance, 'ether'))
+
+    for (let i = 0; i < addrs.length; i++) {
+      const addr = addrs[i];
+      let lockEvents = await getLocksFromAddr(contract, addr);
+      if (lockEvents.length === 0) {
+        lockEvents = await getLocksAtAddr(contract, addr);
+      }
+      const signalEvents = await getSignalsFromAddr(contract, addr);
+      // Append only 1 signal event others will not be counted
+      if (signalEvents.length > 0) {
+        const balance = await web3.eth.getBalance(signalEvents[0].returnValues.contractAddr);
+        result.push({
+          type: 'signal',
+          data: signalEvents[0],
+          eth: Number(web3.utils.fromWei(balance, 'ether'))
+        });
+      }
+      // Parse out lock storage values
+      const promises = lockEvents.map(async event => {
+        const lockStorage = await getLockStorage(event.returnValues.lockAddr, web3);
+        result.push({
+          type: 'lock',
+          data: event,
+          eth: Number(web3.utils.fromWei(`${event.returnValues.eth}`, 'ether')),
+          unlockTimeMinutes: (lockStorage.unlockTime - now) / 60,
+        });
       });
+      // Wait for all promises to resolve
+      await Promise.all(promises);
     }
-    // Parse out lock storage values
-    const promises = lockEvents.map(async event => {
-      const lockStorage = await getLockStorage(event.returnValues.lockAddr, web3);
-      result.push({
-        type: 'lock',
-        data: event,
-        eth: Number(web3.utils.fromWei(`${event.returnValues.eth}`, 'ether')),
-        unlockTimeMinutes: (lockStorage.unlockTime - now) / 60,
-      });
-    });
-    // Wait for all promises to resolve
-    await Promise.all(promises);
+
     resolve({ events: result });
   });
 };

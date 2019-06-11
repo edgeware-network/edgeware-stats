@@ -38,7 +38,7 @@ export const getAllLocks = async (lockdropContract) => {
   return cachedLocks;
 };
 
-export const getLocks = async (lockdropContract, address) => {
+export const getLocksFromAddr = async (lockdropContract, address) => {
   return await lockdropContract.getPastEvents('Locked', {
     fromBlock: 0,
     toBlock: 'latest',
@@ -48,7 +48,7 @@ export const getLocks = async (lockdropContract, address) => {
   });
 };
 
-export const getSignals = async (lockdropContract, address) => {
+export const getSignalsFromAddr = async (lockdropContract, address) => {
   return await lockdropContract.getPastEvents('Signaled', {
     fromBlock: 0,
     toBlock: 'latest',
@@ -56,6 +56,13 @@ export const getSignals = async (lockdropContract, address) => {
       contractAddr: address,
     }
   });
+};
+
+// look up lockdrop user contracts at `address`
+// since lockAddr is not indexed, we must fetch all locks
+export const getLocksAtAddr = async (lockdropContract, address) => {
+  const locks = await getAllLocks();
+  return locks.filter(l => l.returnValues.lockAddr === address);
 };
 
 export const getLockStorage = async (lockAddress, web3) => {
@@ -127,6 +134,7 @@ export const calculateEffectiveLocks = async (lockdropContract, web3) => {
           lockAmt: web3.utils.toBN(data.eth),
           effectiveValue: value,
           lockAddrs: [data.lockAddr],
+          lockTerm: data.term,
         };
       }
     }
@@ -136,12 +144,14 @@ export const calculateEffectiveLocks = async (lockdropContract, web3) => {
         lockAmt: web3.utils.toBN(data.eth).add(locks[data.edgewareAddr].lockAmt),
         effectiveValue: locks[data.edgewareAddr].effectiveValue.add(value),
         lockAddrs: [data.lockAddr, ...locks[data.edgewareAddr].lockAddrs],
+        lockTerm: data.term,
       };
     } else {
       locks[data.edgewareAddr] = {
         lockAmt: web3.utils.toBN(data.eth),
         effectiveValue: value,
         lockAddrs: [data.lockAddr],
+        lockTerm: data.term,
       };
     }
   });
@@ -190,11 +200,13 @@ export const calculateEffectiveSignals = async (lockdropContract, web3, blockNum
       signals[s.edgewareAddr] = {
         signalAmt: web3.utils.toBN(s.balance).add(signals[s.edgewareAddr].signalAmt),
         effectiveValue: signals[s.edgewareAddr].effectiveValue.add(s.value),
+        signalAddrs: [s.contractAddr, ...signals[s.edgewareAddr].signalAddrs],
       };
     } else {
       signals[s.edgewareAddr] = {
         signalAmt: web3.utils.toBN(s.balance),
         effectiveValue: s.value,
+        signalAddrs: [s.contractAddr],
       };
     }
   });
@@ -231,6 +243,8 @@ export const getCountsByBlock = async (web3) => {
         acc.push({
           x: blockNumber,
           y: acc[acc.length - 1].y + valueGetter(value),
+          origin: value.address,
+          txid: value.txid,
         });
       }
       return acc;

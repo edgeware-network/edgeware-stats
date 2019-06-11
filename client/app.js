@@ -10,6 +10,7 @@ import { isHex, MAINNET_LOCKDROP, ROPSTEN_LOCKDROP } from './lockdropHelper';
 import { getParticipationSummary, getAddressSummary } from './helpers';
 
 const CHART_COLORS = [ '#ff6383', '#ff9f40', '#ffcd56', '#4bc0c0', '#36a2eb', ];
+const ETHERSCAN_ADDR_URL = 'https://etherscan.io/address/'
 
 const blocknumToTime = (blocknum) => {
   return `Block#${blocknum}`;
@@ -33,6 +34,14 @@ const state = {
   participationSummary: null,
   addressSummary: null,
 };
+
+function lookupAddrs(lockAddrs) {
+  $('#LOCKDROP_PARTICIPANT_ADDRESS').val(lockAddrs.join(','));
+  $('#LOCK_LOOKUP_BTN').trigger('click');
+  $('html, body').animate({
+    scrollTop: $('#LOCKDROP_PARTICIPANT_ADDRESS').offset().top - 200
+  }, 500);
+}
 
 // sets the state to "loading" and updates data from backend
 async function triggerUpdateData() {
@@ -73,11 +82,22 @@ const Pie = {
               title: { display: true, text: title, fontSize: 14 },
               tooltips: {
                 callbacks: {
-                  label: (tooltipItem, data) =>
-                    formatNumber(data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]) + ' ' + unit
+                  label: (tooltipItem, data) => {
+                    const dataset = data.datasets[tooltipItem.datasetIndex];
+                    const item = dataset.data[tooltipItem.index];
+                    return dataset.formatter ? dataset.formatter(item, tooltipItem.index) : item.toString();
+                  }
                 }
               }
             }
+          });
+
+          $(vnode.dom).click((event) => {
+            const elements = vnode.state.chart.getElementAtEvent(event);
+            if (elements.length !== 1) return;
+            const elementIndex = elements[0]._index;
+            const dataset = vnode.state.chart.data.datasets[0];
+            if (dataset.onclick) dataset.onclick(elements[0]._index);
           });
         }
       })
@@ -209,9 +229,13 @@ const App = {
               ].reverse();
               return {
                 title: 'ETH locked or signaled',
-                unit: 'ETH',
                 data: {
-                  datasets: [{ data: ethDistribution, backgroundColor: CHART_COLORS, borderWidth: 1, }],
+                  datasets: [{
+                    data: ethDistribution,
+                    backgroundColor: CHART_COLORS,
+                    borderWidth: 1,
+                    formatter: (d, index) => [formatNumber(d) + ' ETH'],
+                  }],
                   labels: ethDistributionLabels,
                 }
               };
@@ -234,9 +258,13 @@ const App = {
               ].reverse();
               return {
                 title: 'EDG distribution',
-                unit: 'EDG',
                 data: {
-                  datasets: [{ data: edgDistribution, backgroundColor: CHART_COLORS, borderWidth: 1, }],
+                  datasets: [{
+                    data: edgDistribution,
+                    backgroundColor: CHART_COLORS,
+                    borderWidth: 1,
+                    formatter: (d, index) => [formatNumber(d) + ' EDG'],
+                  }],
                   labels: edgDistributionLabels,
                 }
               };
@@ -246,14 +274,20 @@ const App = {
             id: 'LOCK_DISTRIBUTION_CHART',
             getData: () => {
               const summary = state.participationSummary;
-              const lockParticipants = Object.keys(summary.locks);
-              const lockDistribution = Object.keys(summary.locks).map(l => summary.locks[l].lockAmt).sort((a, b) => a - b);;
-              const colors = randomColor({ count: lockParticipants.length });
+              const lockDistribution = Object.keys(summary.locks)
+                    .map(addr => ({ lockAddrs: summary.locks[addr].lockAddrs, value: summary.locks[addr].lockAmt, }))
+                    .sort((a, b) => a.value - b.value);
+              const colors = randomColor({ count: lockDistribution.length });
               return {
-                title: `Lockers (${lockParticipants.length})`,
-                unit: 'ETH',
+                title: `Lockers (${lockDistribution.length})`,
                 data: {
-                  datasets: [{ data: lockDistribution, backgroundColor: colors, borderWidth: 1, }],
+                  datasets: [{
+                    data: lockDistribution.map(d => d.value),
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    formatter: (d, index) => [formatNumber(d) + ' ETH'],
+                    onclick: (index) => lookupAddrs(lockDistribution[index].lockAddrs)
+                  }],
                 },
               }
             },
@@ -262,14 +296,20 @@ const App = {
             id: 'EFFECTIVE_LOCKS_DISTRIBUTION_CHART',
             getData: () => {
               const summary = state.participationSummary;
-              const lockParticipants = Object.keys(summary.locks);
-              const effectiveLocksDistribution = Object.keys(summary.locks).map(l => summary.locks[l].effectiveValue).sort((a, b) => a - b);;
-              const colors = randomColor({ count: lockParticipants.length });
+              const effectiveLocksDistribution = Object.keys(summary.locks)
+                    .map(addr => ({ lockAddrs: summary.locks[addr].lockAddrs, value: summary.locks[addr].effectiveValue, }))
+                    .sort((a, b) => a.value - b.value);
+              const colors = randomColor({ count: effectiveLocksDistribution.length });
               return {
                 title: 'Lockers Effective ETH',
-                unit: 'ETH',
                 data: {
-                  datasets: [{ data: effectiveLocksDistribution, backgroundColor: colors, borderWidth: 1, }],
+                  datasets: [{
+                    data: effectiveLocksDistribution.map(d => d.value),
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    formatter: (d, index) => [formatNumber(d) + ' ETH'],
+                    onclick: (index) => lookupAddrs(effectiveLocksDistribution[index].lockAddrs),
+                  }],
                 }
               };
             },
@@ -279,14 +319,20 @@ const App = {
             id: 'VALIDATING_LOCK_DISTRIBUTION_CHART',
             getData: () => {
               const summary = state.participationSummary;
-              const validatingParticipants = Object.keys(summary.validatingLocks);
-              const validatingDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].lockAmt).sort((a, b) => a - b);
-              const colors = randomColor({ count: validatingParticipants.length });
+              const validatingDistribution = Object.keys(summary.validatingLocks)
+                    .map(addr => ({ lockAddrs: summary.validatingLocks[addr].lockAddrs, value: summary.validatingLocks[addr].lockAmt, }))
+                    .sort((a, b) => a.value - b.value);
+              const colors = randomColor({ count: validatingDistribution.length });
               return {
-                title: `Validating Lockers (${validatingParticipants.length})`,
-                unit: 'ETH',
+                title: `Validating Lockers (${validatingDistribution.length})`,
                 data: {
-                  datasets: [{ data: validatingDistribution, backgroundColor: colors, borderWidth: 1, }],
+                  datasets: [{
+                    data: validatingDistribution.map(d => d.value),
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    formatter: (d, index) => [formatNumber(d) + ' ETH'],
+                    onclick: (index) => lookupAddrs(validatingDistribution[index].lockAddrs),
+                  }],
                 }
               };
             },
@@ -295,15 +341,21 @@ const App = {
             id: 'EFFECTIVE_VALIDATING_LOCK_DISTRIBUTION_CHART',
             getData: () => {
               const summary = state.participationSummary;
-              const validatingParticipants = Object.keys(summary.validatingLocks);
-              const effectiveValDistribution = Object.keys(summary.validatingLocks).map(l => summary.validatingLocks[l].effectiveValue).sort((a, b) => a - b);
-              const colors = randomColor({ count: validatingParticipants.length });
+              const effectiveValDistribution = Object.keys(summary.validatingLocks)
+                    .map(addr => ({ lockAddrs: summary.validatingLocks[addr].lockAddrs, value: summary.validatingLocks[addr].effectiveValue, }))
+                    .sort((a, b) => a.value - b.value);
+              const colors = randomColor({ count: effectiveValDistribution.length });
 
               return {
                 title: 'Validating Lockers Effective ETH',
-                unit: 'ETH',
                 data: {
-                  datasets: [{ data: effectiveValDistribution, backgroundColor: colors, borderWidth: 1, }],
+                  datasets: [{
+                    data: effectiveValDistribution.map(d => d.value),
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    formatter: (d, index) => [formatNumber(d) + ' ETH'],
+                    onclick: (index) => lookupAddrs(effectiveValDistribution[index].lockAddrs),
+                  }],
                 }
               };
             }
@@ -312,14 +364,20 @@ const App = {
             id: 'SIGNAL_DISTRIBUTION_CHART',
             getData: () => {
               const summary = state.participationSummary;
-              const signalParticipants = Object.keys(summary.signals);
-              const signalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].signalAmt).sort((a, b) => a - b);
-              const colors = randomColor({ count: signalParticipants.length });
+              const signalDistribution = Object.keys(summary.signals)
+                    .map(addr => ({ signalAddrs: summary.signals[addr].signalAddrs, value: summary.signals[addr].signalAmt, }))
+                    .sort((a, b) => a.value - b.value);
+              const colors = randomColor({ count: signalDistribution.length });
               return {
-                title: `Signalers (${signalParticipants.length})`,
-                unit: 'ETH',
+                title: `Signalers (${signalDistribution.length})`,
                 data: {
-                  datasets: [{ data: signalDistribution, backgroundColor: colors, borderWidth: 1, }],
+                  datasets: [{
+                    data: signalDistribution.map(d => d.value),
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    formatter: (d, index) => [formatNumber(d) + ' ETH'],
+                    onclick: (index) => lookupAddrs(signalDistribution[index].signalAddrs),
+                  }],
                 }
               };
             },
@@ -328,14 +386,20 @@ const App = {
             id: 'EFFECTIVE_SIGNAL_DISTRIBUTION_CHART',
             getData: () => {
               const summary = state.participationSummary;
-              const signalParticipants = Object.keys(summary.signals);
-              const effectiveSignalDistribution = Object.keys(summary.signals).map(s => summary.signals[s].effectiveValue).sort((a, b) => a - b);
-              const colors = randomColor({ count: signalParticipants.length });
+              const effectiveSignalDistribution = Object.keys(summary.signals)
+                    .map(addr => ({ signalAddrs: summary.signals[addr].signalAddrs, value: summary.signals[addr].effectiveValue, }))
+                    .sort((a, b) => a.value - b.value);
+              const colors = randomColor({ count: effectiveSignalDistribution.length });
               return {
                 title: 'Signalers Effective ETH',
-                unit: 'ETH',
                 data: {
-                  datasets: [{ data: effectiveSignalDistribution, backgroundColor: colors, borderWidth: 1, }],
+                  datasets: [{
+                    data: effectiveSignalDistribution.map(d => d.value),
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                    formatter: (d, index) => [formatNumber(d) + ' ETH'],
+                    onclick: (index) => lookupAddrs(effectiveSignalDistribution[index].signalAddrs),
+                  }],
                 }
               };
             },
@@ -419,19 +483,27 @@ const App = {
             class: vnode.state.lookupLoading ? 'disabled' : '',
             onclick: async (e) => {
               e.preventDefault();
-              const addr = $('#LOCKDROP_PARTICIPANT_ADDRESS').val();
-              if (!isHex(addr)) {
-                alert('You must input a valid hex encoded Ethereum address')
-              } else if ((addr.length !== 42 && addr.indexOf('0x') !== -1) ||
-                         (addr.length !== 40 && addr.indexOf('0x') === -1)) {
-                alert('You must input a valid lengthed Ethereum address')
-              } else {
-                if (addr.length === 40) addr = `0x${addr}`;
-                vnode.state.lookupLoading = true;
-                state.addressSummary = await getAddressSummary(addr, state.network);
-                vnode.state.lookupLoading = false;
-                m.redraw();
+              const addrText = $('#LOCKDROP_PARTICIPANT_ADDRESS').val();
+              if (!addrText || !addrText.split) return;
+              const addrs = addrText.split(',').map(a => a.trim());
+              for (let i = 0; i < addrs.length; i++) {
+                const addr = addrs[i];
+                // split the address
+                if (!isHex(addr)) {
+                  alert('You must input a valid hex encoded Ethereum address')
+                  return;
+                } else if ((addr.length !== 42 && addr.indexOf('0x') !== -1) ||
+                           (addr.length !== 40 && addr.indexOf('0x') === -1)) {
+                  alert('You must input a valid lengthed Ethereum address')
+                  return;
+                }
               }
+              const formattedAddrs = addrs.map(a => a.length === 40 ? `0x${addr}` : a)
+              state.addressSummary = null;
+              vnode.state.lookupLoading = true;
+              state.addressSummary = await getAddressSummary(formattedAddrs, state.network);
+              vnode.state.lookupLoading = false;
+              m.redraw();
             }
           }, vnode.state.lookupLoading ? 'Loading...' : 'Lookup'),
           m('div', [
