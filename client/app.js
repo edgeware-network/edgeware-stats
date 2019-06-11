@@ -470,7 +470,7 @@ const App = {
         ]),
         m('.form-field', [
           m('.form-left', [
-            m('.caption', 'Find participant address'),
+            m('.caption', 'Look up participant by address(es)'),
             m('input#LOCKDROP_PARTICIPANT_ADDRESS', {
               type: 'text',
               placeholder: 'Enter an ETH address: 0x1234...'
@@ -516,7 +516,14 @@ const App = {
             }, state.addressSummary.events.map((event) => {
               const etherscanNet = state.network === 'mainnet' ? 'https://etherscan.io/' : 'https://ropsten.etherscan.io/';
               return m('li', [
-                m('h3', (event.type === 'signal') ? 'Signal Event' : 'Lock Event'),
+                (event.type === 'signal') ?
+                  m('h3', 'Signaled') :
+                  m('h3', [
+                    `Locked ${event.eth.toFixed(2)} ETH - `,
+                    event.data.returnValues.term === 0 && '3 months',
+                    event.data.returnValues.term === 1 && '6 months',
+                    event.data.returnValues.term === 2 && '12 months',
+                  ]),
                 m('p', [
                   'Tx Hash: ',
                   m('a', {
@@ -550,8 +557,6 @@ const App = {
                     }, event.data.returnValues.lockAddr),
                   ]),
                   m('p', `EDG Public Keys: ${event.data.returnValues.edgewareAddr}`),
-                  m('p', `ETH Locked: ${event.eth.toFixed(2)}`),
-                  m('p', `Term Length: ${(event.data.returnValues.term === 0) ? '3 months' : (event.data.returnValues.term === 1) ? '6 months' : '12 months'}`),
                   m('p', `Unlocks In: ${Math.round(event.unlockTimeMinutes)} minutes`),
                 ],
               ]);
