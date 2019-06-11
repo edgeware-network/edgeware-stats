@@ -149,7 +149,10 @@ const App = {
               'If stats do not load, try disabling Metamask or opening this page in an Incognito window.',
             ])
           ]),
-          state.noData && m('#CHART_LOADING', 'No data - You may be over the API limit. Wait 15 seconds and try again.'),
+          state.noData && m('#CHART_LOADING', [
+            m('p', 'No data - You may be over the API limit.'),
+            m('p', 'Wait 15 seconds and try again.'),
+          ]),
         ] : [
           m(Line, {
             id: 'NUM_PARTICIPANTS_CHART',
@@ -414,7 +417,8 @@ const App = {
         m('.buttons', [
           m('button#LOCK_LOOKUP_BTN', {
             class: vnode.state.lookupLoading ? 'disabled' : '',
-            onclick: async () => {
+            onclick: async (e) => {
+              e.preventDefault();
               const addr = $('#LOCKDROP_PARTICIPANT_ADDRESS').val();
               if (!isHex(addr)) {
                 alert('You must input a valid hex encoded Ethereum address')
@@ -433,7 +437,9 @@ const App = {
           m('div', [
             state.addressSummary && m('ul#LOCK_LOOKUP_RESULTS', {
               oncreate: (vnode) => {
-                $('html, body').animate({ scrollTop: $(vnode.dom).height() - 200 }, 500);
+                $('html, body').animate({
+                  scrollTop: $(vnode.dom).offset().top - 200
+                }, 500);
               }
             }, state.addressSummary.events.map((event) => {
               const etherscanNet = state.network === 'mainnet' ? 'https://etherscan.io/' : 'https://ropsten.etherscan.io/';

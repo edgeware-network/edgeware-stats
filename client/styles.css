@@ -391,7 +391,7 @@ button.disabled {
     border-radius: 6px;
     border: 2px solid #eee;
     margin: 16px 0;
-    min-height: 240px;
+    min-height: 230px;
 }
 .charts #CHART_LOADING {
     color: #c0c0c0;
@@ -413,7 +413,11 @@ button.disabled {
 }
 
 @media (max-width: 680px) {
-    .chart {
-        display: block
+    .charts #CHART_LOADING {
+        margin-top: 34px;
+    }
+    .charts .chart {
+        display: block;
+        width: 100%;
     }
 }
