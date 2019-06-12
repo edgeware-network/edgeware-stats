@@ -9,6 +9,10 @@ const AUG_30TH_UTC = 1567123200;
 export const MAINNET_LOCKDROP = '0x1b75b90e60070d37cfa9d87affd124bb345bf70a';
 export const ROPSTEN_LOCKDROP = '0x111ee804560787E0bFC1898ed79DAe24F2457a04';
 
+// mainnet lockdrop opened on block 7870425
+const MAINNET_START_BLOCK = 7850000;
+const MAX_BLOCKS_PER_MAINNET_QUERY = 50000;
+
 import Web3 from 'web3';
 
 export const isHex = (inputString) => {
@@ -20,21 +24,61 @@ export const isHex = (inputString) => {
 
 let cachedLocks, cachedSignals;
 
-export const getAllSignals = async (lockdropContract) => {
+export const getAllSignals = async (web3, lockdropContract) => {
   if (cachedSignals) return cachedSignals;
-  cachedSignals = await lockdropContract.getPastEvents('Signaled', {
-    fromBlock: 0,
-    toBlock: 'latest',
-  });
+  // batch retrieval of mainnet signal events
+  const network = await web3.eth.net.getNetworkType();
+  if (network === 'main') {
+    let results = [];
+    let fromBlock = MAINNET_START_BLOCK;
+    let toBlock = fromBlock + MAX_BLOCKS_PER_MAINNET_QUERY;
+    const latestBlock = await web3.eth.getBlockNumber();
+    while (toBlock < latestBlock + MAX_BLOCKS_PER_MAINNET_QUERY) {
+      console.log('requesting signals over blocks', fromBlock, 'to', toBlock);
+      const newSignals = await lockdropContract.getPastEvents('Signaled', {
+        fromBlock: fromBlock,
+        toBlock: toBlock,
+      });
+      results = results.concat(newSignals);
+      fromBlock += MAX_BLOCKS_PER_MAINNET_QUERY;
+      toBlock += MAX_BLOCKS_PER_MAINNET_QUERY;
+    }
+    cachedSignals = results;
+  } else {
+    cachedSignals = await lockdropContract.getPastEvents('Signaled', {
+      fromBlock: 0,
+      toBlock: 'latest',
+    });
+  }
   return cachedSignals;
 };
 
-export const getAllLocks = async (lockdropContract) => {
+export const getAllLocks = async (web3, lockdropContract) => {
   if (cachedLocks) return cachedLocks;
-  cachedLocks = await lockdropContract.getPastEvents('Locked', {
-    fromBlock: 0,
-    toBlock: 'latest',
-  });
+  // batch retrieval of mainnet lock events
+  const network = await web3.eth.net.getNetworkType();
+  if (network === 'main') {
+    let results = [];
+    let fromBlock = MAINNET_START_BLOCK;
+    let toBlock = fromBlock + MAX_BLOCKS_PER_MAINNET_QUERY;
+    const latestBlock = await web3.eth.getBlockNumber();
+    while (toBlock < latestBlock + MAX_BLOCKS_PER_MAINNET_QUERY) {
+      console.log('requesting locks over blocks', fromBlock, 'to', toBlock);
+      const newLocks = await lockdropContract.getPastEvents('Locked', {
+        fromBlock: fromBlock,
+        toBlock: toBlock,
+      });
+      results = results.concat(newLocks);
+      fromBlock += MAX_BLOCKS_PER_MAINNET_QUERY;
+      toBlock += MAX_BLOCKS_PER_MAINNET_QUERY;
+    }
+    cachedLocks = results;
+  } else {
+    cachedLocks = await lockdropContract.getPastEvents('Locked', {
+      fromBlock: 0,
+      toBlock: 'latest',
+    });
+  }
   return cachedLocks;
 };
 
@@ -60,8 +104,8 @@ export const getSignalsFromAddr = async (lockdropContract, address) => {
 
 // look up lockdrop user contracts at `address`
 // since lockAddr is not indexed, we must fetch all locks
-export const getLocksAtAddr = async (lockdropContract, address) => {
-  const locks = await getAllLocks();
+export const getLocksAtAddr = async (web3, lockdropContract, address) => {
+  const locks = await getAllLocks(web3);
   return locks.filter(l => l.returnValues.lockAddr === address);
 };
 
@@ -110,7 +154,7 @@ export const calculateEffectiveLocks = async (lockdropContract, web3) => {
   let totalETHLocked = web3.utils.toBN(0);
   let totalEffectiveETHLocked = web3.utils.toBN(0);
   // Get all lock events
-  const lockEvents = await getAllLocks(lockdropContract);
+  const lockEvents = await getAllLocks(web3, lockdropContract);
   // Compatibility with all contract formats
   let lockdropStartTime = await lockdropContract.methods.LOCK_START_TIME().call();
   // Add balances and effective values to total
@@ -170,7 +214,7 @@ export const calculateEffectiveSignals = async (lockdropContract, web3, blockNum
   let totalEffectiveETHSignaled = web3.utils.toBN(0);
   let signals = {};
   // Get all signaled events
-  const signalEvents = await getAllSignals(lockdropContract);
+  const signalEvents = await getAllSignals(web3, lockdropContract);
   // Filter duplicate signals based on sending address
   let seen = {};
   let signalers = signalEvents.map((event) => {
@@ -220,8 +264,10 @@ export const calculateEffectiveSignals = async (lockdropContract, web3, blockNum
 }
 
 export const getCountsByBlock = async (web3) => {
-  const locks = await getAllLocks();
-  const signals = await getAllSignals();
+  // TODO: no lockdropContract is passed because we assume the cached request has been fulfilled...
+  // TODO: we don't consider the difference between mainnet and ropsten
+  const locks = await getAllLocks(web3);
+  const signals = await getAllSignals(web3);
   const allEvents = locks.concat(signals);
   locks.sort((a, b) => a.blockNumber - b.blockNumber);
   signals.sort((a, b) => a.blockNumber - b.blockNumber);
