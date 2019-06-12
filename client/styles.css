@@ -404,6 +404,9 @@ button.disabled {
     width: 50%;
     padding: 0 0 30px;
 }
+#LOCK_LOOKUP_RESULTS {
+    word-break: break-word;
+}
 
 .numbers {
     display: flex;

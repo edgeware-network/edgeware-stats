@@ -301,7 +301,7 @@ const App = {
                     .sort((a, b) => a.value - b.value);
               const colors = randomColor({ count: effectiveLocksDistribution.length });
               return {
-                title: 'Lockers Effective ETH',
+                title: `Lockers Effective ETH (${summary.totalEffectiveETHLocked.toFixed(1)} ETH)`,
                 data: {
                   datasets: [{
                     data: effectiveLocksDistribution.map(d => d.value),
@@ -344,10 +344,11 @@ const App = {
               const effectiveValDistribution = Object.keys(summary.validatingLocks)
                     .map(addr => ({ lockAddrs: summary.validatingLocks[addr].lockAddrs, value: summary.validatingLocks[addr].effectiveValue, }))
                     .sort((a, b) => a.value - b.value);
+              const totalValidatorEffectiveETH = effectiveValDistribution.map(d => d.value).reduce(((a, b) => a + b), 0);
               const colors = randomColor({ count: effectiveValDistribution.length });
 
               return {
-                title: 'Validating Lockers Effective ETH',
+                title: `Validating Lockers Effective ETH (${totalValidatorEffectiveETH.toFixed(1)} ETH)`,
                 data: {
                   datasets: [{
                     data: effectiveValDistribution.map(d => d.value),
@@ -391,7 +392,7 @@ const App = {
                     .sort((a, b) => a.value - b.value);
               const colors = randomColor({ count: effectiveSignalDistribution.length });
               return {
-                title: 'Signalers Effective ETH',
+                title: `Signalers Effective ETH (${summary.totalEffectiveETHSignaled.toFixed(1)} ETH)`,
                 data: {
                   datasets: [{
                     data: effectiveSignalDistribution.map(d => d.value),
