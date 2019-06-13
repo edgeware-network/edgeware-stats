@@ -106,7 +106,7 @@ export const getSignalsFromAddr = async (lockdropContract, address) => {
 // since lockAddr is not indexed, we must fetch all locks
 export const getLocksAtAddr = async (web3, lockdropContract, address) => {
   const locks = await getAllLocks(web3);
-  return locks.filter(l => l.returnValues.lockAddr === address);
+  return locks.filter(l => l.returnValues.lockAddr.toLowerCase() === address.toLowerCase());
 };
 
 export const getLockStorage = async (lockAddress, web3) => {

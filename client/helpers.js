@@ -27,7 +27,7 @@ export const getAddressSummary = async (addrs, network) => {
       const addr = addrs[i];
       let lockEvents = await getLocksFromAddr(contract, addr);
       if (lockEvents.length === 0) {
-        lockEvents = await getLocksAtAddr(contract, addr);
+        lockEvents = await getLocksAtAddr(web3, contract, addr);
       }
       const signalEvents = await getSignalsFromAddr(contract, addr);
       // Append only 1 signal event others will not be counted
