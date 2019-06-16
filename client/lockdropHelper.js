@@ -11,7 +11,7 @@ export const ROPSTEN_LOCKDROP = '0x111ee804560787E0bFC1898ed79DAe24F2457a04';
 
 // mainnet lockdrop opened on block 7870425
 const MAINNET_START_BLOCK = 7870000;
-const MAX_BLOCKS_PER_MAINNET_QUERY = 25000;
+const MAX_BLOCKS_PER_MAINNET_QUERY = 15000;
 
 import Web3 from 'web3';
 
