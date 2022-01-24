@@ -41,7 +41,6 @@
     "mithril": "^1.1.6",
     "moment": "^2.23.0",
     "moment-twitter": "^0.2.0",
-    "node-sass": "^4.11.0",
     "nodemon": "^1.18.10",
     "nprogress": "^0.2.0",
     "plottable": "^3.8.6",
@@ -56,5 +55,8 @@
     "webpack-dev-server": "^3.1.14",
     "webpack-merge": "^4.1.4",
     "ws": "^6.2.1"
+  },
+  "devDependencies": {
+    "sass": "^1.49.0"
   }
 }
