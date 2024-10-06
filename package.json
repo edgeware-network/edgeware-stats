@@ -51,7 +51,7 @@
     "web3": "^1.0.0-beta.55",
     "web3-eth-contract": "^1.0.0-beta.55",
     "webpack": "^4.28.3",
-    "webpack-cli": "^3.1.2",
+    "webpack-cli": "^4.10.0",
     "webpack-dev-server": "^3.1.14",
     "webpack-merge": "^4.1.4",
     "ws": "^6.2.1"
