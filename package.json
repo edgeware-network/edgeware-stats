@@ -27,7 +27,7 @@
     "@polkadot/keyring": "^0.91.1",
     "@polkadot/util": "^0.91.1",
     "@polkadot/util-crypto": "^0.91.1",
-    "babel-loader": "^8.0.4",
+    "babel-loader": "^8.4.1",
     "babel-polyfill": "^6.26.0",
     "chart.js": "^2.9.4",
     "clean-webpack-plugin": "^4.0.0",
